@@ -187,11 +187,13 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   task->_prev = _task_struct[cpuid].bottom_sub;
   _task_struct[cpuid].bottom_sub = task;
 
+#ifdef __KERNEL__
   if (_task_struct[cpuid].state == TaskQueueState::kSleeped) {
     if (cpu_ctrl->GetId() != cpuid) {
       apic_ctrl->SendIpi(apic_ctrl->GetApicIdFromCpuId(cpuid));
     }
   }
+#endif // __KERNEL__
 }
 
 Task::~Task() {

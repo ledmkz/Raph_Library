@@ -20,8 +20,8 @@
  * 
  */
 
-#ifndef __RAPH_KERNEL_DEV_TASK_H__
-#define __RAPH_KERNEL_DEV_TASK_H__
+#ifndef __RAPH_LIB_TASK_H__
+#define __RAPH_LIB_TASK_H__
 
 #include <global.h>
 #include <spinlock.h>
@@ -120,4 +120,4 @@ private:
   friend TaskCtrl;
 };
 
-#endif /* __RAPH_KERNEL_DEV_TASK_H__ */
+#endif /* __RAPH_LIB_TASK_H__ */

@@ -1,4 +1,4 @@
-OBJS = task.o functional.o spinlock.o
+OBJS = task.o functional.o spinlock.o libglobal.o
 
 DEPS= $(filter %.d, $(subst .o,.d, $(OBJS)))
 

@@ -21,10 +21,16 @@
  */
 
 #include <task.h>
+#include <cpu.h>
+
+#ifdef __KERNEL__
 #include <apic.h>
+#else
+#include <unistd.h>
+#endif // __KERNEL__
 
 void TaskCtrl::Setup() {
-  int cpus = apic_ctrl->GetHowManyCpus();
+  int cpus = cpu_ctrl->GetHowManyCpus();
   _task_struct = reinterpret_cast<TaskStruct *>(virtmem_ctrl->Alloc(sizeof(TaskStruct) * cpus));
   Task *t;
   for (int i = 0; i < cpus; i++) {
@@ -91,12 +97,16 @@ void TaskCtrl::Setup() {
 // }
 
 void TaskCtrl::Run() {
-  int cpuid = apic_ctrl->GetCpuId();
+  int cpuid = cpu_ctrl->GetId();
+#ifdef __KERNEL__
   apic_ctrl->SetupTimer();
+#endif // __KERNEL__
   while(true) {
     {
       Locker locker(_task_struct[cpuid].lock);
+#ifdef __KERNEL__
       apic_ctrl->StopTimer();
+#endif // __KERNEL__
       kassert(_task_struct[cpuid].state == TaskQueueState::kNotRunning
               || _task_struct[cpuid].state == TaskQueueState::kSleeped);
       _task_struct[cpuid].state = TaskQueueState::kRunning;
@@ -147,17 +157,23 @@ void TaskCtrl::Run() {
 
       if (_task_struct[cpuid].top->_next != nullptr || _task_struct[cpuid].top_sub->_next != nullptr) {
         _task_struct[cpuid].state = TaskQueueState::kNotRunning;
-        apic_ctrl->StartTimer();
       } else {
         _task_struct[cpuid].state = TaskQueueState::kSleeped;
       }
     }
+#ifdef __KERNEL__
+    if (_task_struct[cpuid].state == TaskQueueState::kNotRunning) {
+      apic_ctrl->StartTimer();
+    }
     asm volatile("hlt");
+#else
+    usleep(10);
+#endif // __KERNEL__
   }
 }
 
 void TaskCtrl::Register(int cpuid, Task *task) {
-  if (cpuid < 0 || cpuid >= apic_ctrl->GetHowManyCpus()) {
+  if (cpuid < 0 || cpuid >= cpu_ctrl->GetHowManyCpus()) {
     return;
   }
   Locker locker(_task_struct[cpuid].lock);
@@ -172,7 +188,7 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   _task_struct[cpuid].bottom_sub = task;
 
   if (_task_struct[cpuid].state == TaskQueueState::kSleeped) {
-    if (apic_ctrl->GetCpuId() != cpuid) {
+    if (cpu_ctrl->GetId() != cpuid) {
       apic_ctrl->SendIpi(apic_ctrl->GetApicIdFromCpuId(cpuid));
     }
   }

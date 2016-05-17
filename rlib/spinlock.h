@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2015 Raphine Project
+ * Copyright (c) 2016 Raphine Project
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,7 +24,6 @@
 #define __RAPH_KERNEL_SPINLOCK_H__
 
 #include <stdint.h>
-#include <assert.h>
 
 class SpinLockInterface {
 public:
@@ -63,6 +62,7 @@ protected:
   volatile int _id;
 };
 
+#ifdef __KERNEL__
 // 割り込みハンドラ内でも使えるSpinLock
 // ロック確保時にI/O割り込みを禁止するため、可能ならSpinLockを使う事
 // また、例外処理中などは使えない
@@ -92,6 +92,7 @@ protected:
   volatile int _id;
   bool _did_stop_interrupt = false;
 };
+#endif // __KERNEL__
 
 class DebugSpinLock : public SpinLock {
 public:

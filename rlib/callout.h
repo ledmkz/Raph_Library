@@ -23,12 +23,12 @@
 #ifndef __RAPH_KERNEL_CALLOUT_H__
 #define __RAPH_KERNEL_CALLOUT_H__
 
-#include "callout.h"
-#include "polling.h"
-#include "timer.h"
-#include "global.h"
-#include "task.h"
-
+#include <callout.h>
+#include <polling.h>
+#include <timer.h>
+#include <global.h>
+#include <task.h>
+#include <cpu.h>
 
 class Callout : public Polling {
  public:
@@ -48,7 +48,7 @@ class Callout : public Polling {
     _func = func;
   }
   void SetHandler(uint32_t us) {
-    SetHandler(apic_ctrl->GetCpuId(), us);
+    SetHandler(cpu_ctrl->GetId(), us);
   }
   void SetHandler(int cpuid, uint32_t us) {
     if (_state == CalloutState::kNull) {

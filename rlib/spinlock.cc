@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2015 Raphine Project
+ * Copyright (c) 2016 Raphine Project
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,32 +22,32 @@
 
 #include <spinlock.h>
 #include <raph.h>
+#include <cpu.h>
+
+#ifdef __KERNEL__
 #include <idt.h>
 #include <apic.h>
+#endif // __KERNEL__
 
 void SpinLock::Lock() {
-#ifndef __UNIT_TEST__
+#ifdef __KERNEL__
   kassert(idt->GetHandlingCnt() == 0);
+#endif // __KERNEL__
   if ((_flag % 2) == 1) {
-    kassert(_id != apic_ctrl->GetCpuId());
+    kassert(_id != cpu_ctrl->GetId());
   }
-#endif // __UNIT_TEST__
   volatile unsigned int flag = GetFlag();
   while((flag % 2) == 1 || !SetFlag(flag, flag + 1)) {
     flag = GetFlag();
   }
-#ifndef __UNIT_TEST__
-  _id = apic_ctrl->GetCpuId();
-#endif // __UNIT_TEST__
+  _id = cpu_ctrl->GetId();
 }
 
 void DebugSpinLock::Lock() {
   kassert(_key == kKey);
-#ifndef __UNIT_TEST__
   if ((_flag % 2) == 1) {
-    kassert(_id != apic_ctrl->GetCpuId());
+    kassert(_id != cpu_ctrl->GetId());
   }
-#endif // __UNIT_TEST__
   SpinLock::Lock();
 }
 
@@ -66,9 +66,10 @@ int SpinLock::Trylock() {
   }
 }
 
+#ifdef __KERNEL__
 void IntSpinLock::Lock() {
   if ((_flag % 2) == 1) {
-    kassert(_id != apic_ctrl->GetCpuId());
+    kassert(_id != cpu_ctrl->GetId());
   }
   volatile unsigned int flag = GetFlag();
   while(true) {
@@ -92,7 +93,7 @@ void IntSpinLock::Lock() {
     }
     flag = GetFlag();
   }
-  _id = apic_ctrl->GetCpuId();
+  _id = cpu_ctrl->GetId();
 }
 
 void IntSpinLock::Unlock() {
@@ -120,3 +121,4 @@ void IntSpinLock::EnableInt() {
     apic_ctrl->EnableInt();
   }
 }
+#endif // __KERNEL__

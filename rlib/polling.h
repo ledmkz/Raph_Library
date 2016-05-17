@@ -26,7 +26,7 @@
 #include <global.h>
 #include <raph.h>
 #include <task.h>
-#include <apic.h>
+#include <cpu.h>
 
 class Polling {
  protected:
@@ -75,7 +75,7 @@ class Polling {
 class PollingFunc : public Polling {
  public:
   void Register() {
-    Register(apic_ctrl->GetCpuId());
+    Register(cpu_ctrl->GetId());
   }
   void Register(int cpuid) {
     this->RegisterPolling(cpuid);

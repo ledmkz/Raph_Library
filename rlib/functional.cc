@@ -53,7 +53,7 @@ void Functional::Handle(void *p) {
   }
 }
 
-void Functional::SetFunction(int cpuid, const Function &func) {
+void Functional::SetFunction(int cpuid, const GenericFunction &func) {
   kassert(!_func.CanExecute());
   _cpuid = cpuid;
   _func = func;

@@ -54,7 +54,6 @@ class Polling {
     Function func;
     func.Init(HandleSub, reinterpret_cast<void *>(this));
     _state = PollingState::kStopped;
-    // task_ctrl->Remove(_cpuid, &_task);
   }
   virtual void Handle() = 0;
  private:
@@ -83,14 +82,14 @@ class PollingFunc : public Polling {
   void Remove() {
     this->RemovePolling();
   }
-  void Init(const Function &func) {
+  void Init(const GenericFunction &func) {
     _func = func;
   }
  private:
   virtual void Handle() override {
     _func.Execute();
   }
-  Function _func;
+  FunctionBase _func;
 };
 
 #endif /* __RAPH_KERNEL_DEV_POLLING_H__ */

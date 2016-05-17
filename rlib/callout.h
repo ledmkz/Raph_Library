@@ -44,7 +44,7 @@ class Callout : public Polling {
   }
   virtual ~Callout() {
   }
-  void Init(const Function &func) {
+  void Init(const GenericFunction &func) {
     _func = func;
   }
   void SetHandler(uint32_t us) {
@@ -84,7 +84,7 @@ class Callout : public Polling {
  private:
   volatile int _status = 0;
   uint64_t _cnt;
-  Function _func;
+  FunctionBase _func;
   CalloutState _state = CalloutState::kNull;
   CalloutHandleState _hstate = CalloutHandleState::kStopped;
 };

@@ -59,44 +59,13 @@ public:
   } *_task_struct = nullptr;
 };
 
-class Function {
- public:
-  Function() {
-  }
-  Function(const Function &func) {
-    _func = func._func;
-    _arg = func._arg;
-  }
-  void Init(void (*func)(void *), void *arg) {
-    _func = func;
-    _arg = arg;
-  }
-  void Execute() {
-    if (_func != nullptr) {
-      _func(_arg);
-    }
-  }
-  volatile bool CanExecute() {
-    return (_func != nullptr);
-  }
-  void Clear() {
-    _func = nullptr;
-  }
-  bool Equal(const Function &func) {
-    return (_func == func._func) && (_arg == func._arg);
-  }
- private:
-  void (*_func)(void *) = nullptr;
-  void *_arg;
-};
-
 class Task {
 public:
   Task() {
     _cnt = 0;
   }
   virtual ~Task();
-  void SetFunc(const Function &func) {
+  void SetFunc(const GenericFunction &func) {
     _func = func;
   }
   enum class Status {
@@ -112,7 +81,7 @@ public:
     _func.Execute();
   }
 private:
-  Function _func;
+  FunctionBase _func;
   Task *_next;
   Task *_prev;
   Status _status = Status::kOutOfQueue;

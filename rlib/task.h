@@ -24,6 +24,7 @@
 #define __RAPH_LIB_TASK_H__
 
 #include <global.h>
+#include <function.h>
 #include <spinlock.h>
 
 class Task;
@@ -66,7 +67,7 @@ public:
   }
   virtual ~Task();
   void SetFunc(const GenericFunction &func) {
-    _func = func;
+    _func.Copy(func);
   }
   enum class Status {
     kRunning,

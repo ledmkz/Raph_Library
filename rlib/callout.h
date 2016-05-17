@@ -45,7 +45,7 @@ class Callout : public Polling {
   virtual ~Callout() {
   }
   void Init(const GenericFunction &func) {
-    _func = func;
+    _func.Copy(func);
   }
   void SetHandler(uint32_t us) {
     SetHandler(cpu_ctrl->GetId(), us);

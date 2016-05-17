@@ -83,7 +83,7 @@ class PollingFunc : public Polling {
     this->RemovePolling();
   }
   void Init(const GenericFunction &func) {
-    _func = func;
+    _func.Copy(func);
   }
  private:
   virtual void Handle() override {

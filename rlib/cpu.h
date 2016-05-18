@@ -45,6 +45,18 @@ public:
   }
 };
 #else
+#include <thread.h>
+#include <global.h>
+
+class CpuCtrl : public CpuCtrlInterface {
+public:
+  virtual volatile int GetId() override {
+    return apic_ctrl->GetCpuId();
+  }
+  virtual int GetHowManyCpus() override {
+    return apic_ctrl->GetHowManyCpus();
+  }
+};
 #endif /* __KERNEL__ */
 
 #endif /* __RAPH_LIB_CPU_H__ */

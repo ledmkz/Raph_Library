@@ -23,6 +23,7 @@
 #include <spinlock.h>
 #include <raph.h>
 #include <cpu.h>
+#include <libglobal.h>
 
 #ifdef __KERNEL__
 #include <idt.h>

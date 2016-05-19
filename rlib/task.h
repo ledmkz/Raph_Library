@@ -54,7 +54,11 @@ public:
     Task *bottom;
     Task *top_sub;
     Task *bottom_sub;
+#ifdef __KERNEL__
     IntSpinLock lock;
+#else
+    SpinLock lock;
+#endif // __KERNEL__
 
     TaskQueueState state;
   } *_task_struct = nullptr;

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2016 Project Raphine
+ * Copyright (c) 2016 Raphine Project
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,37 +16,23 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Author: Liva
+ * Author: Levelfour
  * 
  */
 
-#ifndef __RAPH_LIB_CPU_H__
-#define __RAPH_LIB_CPU_H__
+#ifndef __RAPH_LIB_APIC_INTERFACE_H__
+#define __RAPH_LIB_APIC_INTERFACE_H__
 
-class CpuCtrlInterface {
+class Regs;
+
+class ApicCtrlInterface {
 public:
-  virtual ~CpuCtrlInterface() {
-  }
-  virtual volatile int GetId() = 0;
+  virtual void Setup() = 0;
+  virtual volatile int GetCpuId() = 0;
   virtual int GetHowManyCpus() = 0;
+  virtual void SetupTimer() = 0;
+  virtual void StartTimer() = 0;
+  virtual void StopTimer() = 0;
 };
 
-#ifdef __KERNEL__
-#include <apic.h>
-#else
-#include <thread.h>
-#endif /* __KERNEL__ */
-
-#include <global.h>
-
-class CpuCtrl : public CpuCtrlInterface {
-public:
-  virtual volatile int GetId() override {
-    return apic_ctrl->GetCpuId();
-  }
-  virtual int GetHowManyCpus() override {
-    return apic_ctrl->GetHowManyCpus();
-  }
-};
-
-#endif /* __RAPH_LIB_CPU_H__ */
+#endif /* __RAPH_LIB_APIC_INTERFACE_H__ */

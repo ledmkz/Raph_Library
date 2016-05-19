@@ -29,40 +29,33 @@
 #include <memory>
 #include <thread>
 #include <stdint.h>
-#include <apic.h>
+#include <apic_interface.h>
 
 class PthreadCtrl : public ApicCtrlInterface {
 public:
   PthreadCtrl() : _thread_pool(0) {}
   PthreadCtrl(int num_threads) : _cpu_nums(num_threads), _thread_pool(num_threads-1) {}
-  ~PthreadCtrl() {
-    for(auto th: _thread_pool) {
-      th->detach();
-    }
-  }
-  virtual void Setup() override {
-    for(int i = 0; i < _thread_pool.size(); i++) {
-      _thread_pool[i] = new std::thread ([]{
-          task_ctrl->Run();
-      });
-    }
-  }
-  virtual volatile int GetCpuId() override {
-    return 0;
-  }
+  ~PthreadCtrl();
+  virtual void Setup() override;
+  virtual volatile int GetCpuId() override;
   virtual int GetHowManyCpus() override {
     return _cpu_nums;
   }
-  virtual void SetupTimer() override {
-  }
-  virtual void StartTimer() override {
-  }
-  virtual void StopTimer() override {
-  }
+  virtual void SetupTimer() override {}
+  virtual void StartTimer() override {}
+  virtual void StopTimer() override {}
 
 private:
+  static const uint8_t kMaxThreadsNumber = 128;
+
   int _cpu_nums = 1;
-  std::vector<std::unique_ptr<std::thread>> _thread_pool;
+
+  typedef std::vector<std::unique_ptr<std::thread>> thread_pool_t;
+  thread_pool_t _thread_pool;
+
+  int _thread_ids[kMaxThreadsNumber];
+
+  int GetThreadId();
 };
 
 #endif // !__KERNEL__

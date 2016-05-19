@@ -23,12 +23,12 @@
 #ifndef __RAPH_LIB_LIBGLOBAL_H__
 #define __RAPH_LIB_LIBGLOBAL_H__
 
-class CpuCtrl;
+class CpuCtrlInterface;
 class TaskCtrl;
 class Tty;
 class Timer;
 
-extern CpuCtrl *cpu_ctrl;
+extern CpuCtrlInterface *cpu_ctrl;
 extern TaskCtrl *task_ctrl;
 extern Tty *gtty;
 extern Timer *timer;

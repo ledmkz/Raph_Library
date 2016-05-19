@@ -29,21 +29,18 @@
 #include <memory>
 #include <thread>
 #include <stdint.h>
-#include <apic_interface.h>
+#include <cpu.h>
 
-class PthreadCtrl : public ApicCtrlInterface {
+class PthreadCtrl : public CpuCtrlInterface {
 public:
   PthreadCtrl() : _thread_pool(0) {}
   PthreadCtrl(int num_threads) : _cpu_nums(num_threads), _thread_pool(num_threads-1) {}
   ~PthreadCtrl();
-  virtual void Setup() override;
-  virtual volatile int GetCpuId() override;
+  void Setup();
+  virtual volatile int GetId() override;
   virtual int GetHowManyCpus() override {
     return _cpu_nums;
   }
-  virtual void SetupTimer() override {}
-  virtual void StartTimer() override {}
-  virtual void StopTimer() override {}
 
 private:
   static const uint8_t kMaxThreadsNumber = 128;

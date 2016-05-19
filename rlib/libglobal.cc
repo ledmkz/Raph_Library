@@ -22,7 +22,7 @@
 
 #include <libglobal.h>
 
-CpuCtrl *cpu_ctrl;
+CpuCtrlInterface *cpu_ctrl;
 TaskCtrl *task_ctrl;
 Timer *timer;
 Tty *gtty;

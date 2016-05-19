@@ -33,10 +33,6 @@ public:
 
 #ifdef __KERNEL__
 #include <apic.h>
-#else
-#include <thread.h>
-#endif /* __KERNEL__ */
-
 #include <global.h>
 
 class CpuCtrl : public CpuCtrlInterface {
@@ -48,5 +44,8 @@ public:
     return apic_ctrl->GetHowManyCpus();
   }
 };
+#else
+#include <thread.h>
+#endif /* __KERNEL__ */
 
 #endif /* __RAPH_LIB_CPU_H__ */

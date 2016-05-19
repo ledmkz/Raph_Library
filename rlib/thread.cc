@@ -22,7 +22,6 @@
 
 #ifndef __KERNEL__
 
-#include <iostream>
 #include <thread.h>
 #include <task.h>
 #include <global.h>
@@ -51,7 +50,7 @@ void PthreadCtrl::Setup() {
   }
 }
 
-volatile int PthreadCtrl::GetCpuId() {
+volatile int PthreadCtrl::GetId() {
   for(int i = 0; i < _cpu_nums; i++) {
     if(_thread_ids[i] == GetThreadId()) {
       return i;

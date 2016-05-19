@@ -130,7 +130,6 @@ void TaskCtrl::Run() {
         }
         kassert(t->_status == Task::Status::kWaitingInQueue);
         t->_status = Task::Status::kRunning;
-        t->_cnt--;
         t->_next = nullptr;
         t->_prev = nullptr;
       }
@@ -177,7 +176,6 @@ void TaskCtrl::Register(int cpuid, Task *task) {
     return;
   }
   Locker locker(_task_struct[cpuid].lock);
-  task->_cnt++;
   if (task->_status == Task::Status::kWaitingInQueue) {
     return;
   }
@@ -198,4 +196,27 @@ void TaskCtrl::Register(int cpuid, Task *task) {
 
 Task::~Task() {
   kassert(_status == Status::kOutOfQueue);
+}
+
+void CountableTask::Inc() {
+  if (_cpuid == -1) {
+    return;
+  }
+  //TODO CASを使って高速化
+  Locker locker(_lock);
+  _cnt++;
+  if (_cnt == 1) {
+    task_ctrl->Register(_cpuid, &_task);
+  }
+}
+
+void CountableTask::HandleSub(void *) {
+  _func.Execute();
+  {
+    Locker locker(_lock);
+    _cnt--;
+    if (_cnt != 0) {
+      task_ctrl->Register(_cpuid, &_task);
+    }
+  }
 }

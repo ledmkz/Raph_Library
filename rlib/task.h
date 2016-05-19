@@ -63,7 +63,6 @@ public:
 class Task {
 public:
   Task() {
-    _cnt = 0;
   }
   virtual ~Task();
   void SetFunc(const GenericFunction &func) {
@@ -78,16 +77,46 @@ public:
   Status GetStatus() {
     return _status;
   }
+private:
   void Execute() {
     _func.Execute();
   }
-private:
   FunctionBase _func;
   Task *_next;
   Task *_prev;
   Status _status = Status::kOutOfQueue;
-  int _cnt;
   friend TaskCtrl;
+};
+ 
+// Taskがキューに積まれている間にインクリメント可能
+// 割り込み内からも呼び出せる
+// ただし、一定時間後に立ち上げる事や割り当てcpuidを変える事はできない
+class CountableTask {
+public:
+  CountableTask() {
+    _cnt = 0;
+    _cpuid = -1;
+    ClassFunction<CountableTask> func;
+    func.Init(this, &CountableTask::HandleSub, nullptr);
+    _task.SetFunc(func);
+  }
+  virtual ~CountableTask() {
+  }
+  void SetFunc(int cpuid, const GenericFunction &func) {
+    _cpuid = cpuid;
+    _func.Copy(func);
+  }
+  Task::Status GetStatus() {
+    return _task.GetStatus();
+  }
+  void Inc();
+private:
+  void HandleSub(void *);
+  Task _task;
+  IntSpinLock _lock;
+  FunctionBase _func;
+  int _cnt;
+  int _cpuid;
 };
 
 #endif /* __RAPH_LIB_TASK_H__ */

@@ -23,6 +23,7 @@
 #ifndef __RAPH_KERNEL_FUNCTION_H__
 #define __RAPH_KERNEL_FUNCTION_H__
 
+#include <global.h>
 #include <mem/virtmem.h>
 
 class FunctionBaseObj {

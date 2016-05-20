@@ -43,7 +43,7 @@ public:
     uint8_t buf[kMaxPacketLength];
   };
 
-  PoolingSocket() : _client(-1) {}
+  PoolingSocket(int port) : _port(port), _client(-1) {}
   virtual int32_t Open() override;
   virtual void SetReceiveCallback(int cpuid, const Function &func) override {
     _rx_buffered.SetFunction(cpuid, func);
@@ -90,8 +90,13 @@ private:
 
   PollingFunc _polling;
 
+  // listening port
+  int _port;
+  // TCP socket
   int _socket;
+  // socket descriptor of the accepted client
   int _client;
+
   fd_set _fds;
   struct timeval _timeout;
 };

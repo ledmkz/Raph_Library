@@ -41,7 +41,7 @@ int32_t PoolingSocket::Open() {
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(12345);
+    addr.sin_port = htons(_port);
     bind(_socket, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr));
 
     FD_ZERO(&_fds);

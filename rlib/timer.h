@@ -33,9 +33,18 @@ class Timer {
   volatile uint64_t GetCntAfterPeriod(volatile uint64_t cur, int us) {
     return cur + (static_cast<int64_t>(us) * 1000) / _cnt_clk_period;
   }
+  volatile bool IsGreater(uint64_t n1, uint64_t n2) {
+    if (n1 >= n2) {
+      return true;
+    } else if (n1 < 0x1000000000000000 && n2 <= 0xF000000000000000) {
+      return true;
+    } else {
+      return false;
+    }
+  }
   volatile bool IsTimePassed(volatile uint64_t time) {
     volatile uint64_t cur = ReadMainCnt();
-    return cur >= time;
+    return IsGreater(cur, time);
   }
   // ビジーループタイムアウト
   // 最適化回避のためにできるだけこの関数を使うべき

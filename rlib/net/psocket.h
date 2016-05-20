@@ -92,6 +92,8 @@ private:
 
   int _socket;
   int _client;
+  fd_set _fds;
+  struct timeval _timeout;
 };
 
 #endif // !__KERNEL__

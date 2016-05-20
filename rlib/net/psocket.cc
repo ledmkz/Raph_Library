@@ -26,18 +26,28 @@
 #include <mem/uvirtmem.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 int32_t PoolingSocket::Open() {
   if((_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("");
     return _socket;
   } else {
+    // turn on non-blocking mode
+    int flag = fcntl(_socket, F_GETFL);
+    fcntl(_socket, F_SETFL, flag | O_NONBLOCK);
+
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(12345);
     bind(_socket, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr));
+
+    FD_ZERO(&_fds);
+
+    _timeout.tv_sec = 0;
+    _timeout.tv_usec = 0;
 
     InitPacketBuffer();
     SetupPollingHandler();
@@ -59,27 +69,46 @@ void PoolingSocket::InitPacketBuffer() {
 
 void PoolingSocket::Poll(void *arg) {
   if (_client == -1) {
-    // TODO: make non-blocking
     listen(_socket, 1);
-    _client = accept(_socket, nullptr, nullptr);
-  } else {
+    if ((_client = accept(_socket, nullptr, nullptr)) > 0) {
+      FD_SET(_client, &_fds);
+    }
+  }
+
+  if (_client != -1) {
     Packet *packet;
-  
+
+    fd_set tmp_fds;
+    memcpy(&tmp_fds, &_fds, sizeof(_fds));
+
     // receive packet (non-blocking)
-    if (GetRxPacket(packet)) {
-      // TODO: make non-blocking
-      int32_t rval = recv(_client, packet->buf, kMaxPacketLength, 0);
-      if (rval > 0) {
-        packet->len = rval;
-        _rx_buffered.Push(packet);
-      } else {
-        ReuseRxBuffer(packet);
+    if (select(_client+1, &tmp_fds, 0, 0, &_timeout) >= 0) {
+      if (FD_ISSET(_client, &tmp_fds)) {
+        if (GetRxPacket(packet)) {
+          int32_t rval = read(_client, packet->buf, kMaxPacketLength);
+          if (rval > 0) {
+            packet->len = rval;
+            _rx_buffered.Push(packet);
+          } else {
+            if (rval == 0) {
+              // socket may be closed by foreign host
+              close(_client);
+              _client = -1;
+            }
+
+            ReuseRxBuffer(packet);
+          }
+        }
       }
     }
+  }
   
+  if (_client != -1) {
+    Packet *packet;
+
     // transmit packet (if non-sent packet remains in buffer)
     if (_tx_buffered.Pop(packet)) {
-      int32_t rval = sendto(_client, packet->buf, packet->len, 0, nullptr, 0);
+      int32_t rval = write(_client, packet->buf, packet->len);
       if (rval == packet->len) {
         ReuseTxBuffer(packet);
       }

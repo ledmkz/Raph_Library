@@ -55,7 +55,7 @@ public:
   void ReuseTxBuffer(Packet *packet) {
     kassert(_tx_reserved.Push(packet));
   }
-  bool GetTxPacket(Packet *packet) {
+  bool GetTxPacket(Packet *&packet) {
     if (_tx_reserved.Pop(packet)) {
       packet->len = 0;
       return true;

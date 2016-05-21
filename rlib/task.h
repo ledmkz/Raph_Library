@@ -39,7 +39,7 @@ public:
   TaskCtrl() {}
   void Setup();
   void Register(int cpuid, Task *task);
-  void Register(int cpuid, Task *task);
+  void Register(int cpuid, Task *task, int us);
   // void Remove(int cpuid, Task *task);
   void Run();
   TaskQueueState GetState(int cpuid) {

@@ -37,6 +37,7 @@ class Timer {
     if (n1 >= n2) {
       return true;
     } else if (n1 < 0x1000000000000000 && n2 <= 0xF000000000000000) {
+      //TODO is this ok?
       return true;
     } else {
       return false;
@@ -49,12 +50,7 @@ class Timer {
   // ビジーループタイムアウト
   // 最適化回避のためにできるだけこの関数を使うべき
   void BusyUwait(int us) {
-    volatile uint64_t cur = ReadMainCnt();
     volatile uint64_t end = GetCntAfterPeriod(cur, us);
-    if (cur > end) {
-      for (volatile uint64_t tmp = ReadMainCnt(); cur <= tmp; tmp = ReadMainCnt()) {
-      }
-    }
     while(true) {
       volatile bool flag = IsTimePassed(end);
       if (flag) {

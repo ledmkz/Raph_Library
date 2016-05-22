@@ -36,7 +36,7 @@ class Timer {
   volatile bool IsGreater(uint64_t n1, uint64_t n2) {
     if (n1 >= n2) {
       return true;
-    } else if (n1 < 0x1000000000000000 && n2 <= 0xF000000000000000) {
+    } else if (n1 < 0x1000000000000000 && n2 > 0xF000000000000000) {
       //TODO is this ok?
       return true;
     } else {

@@ -30,7 +30,7 @@ public:
   virtual volatile int GetId() = 0;
   virtual int GetHowManyCpus() = 0;
   bool IsInvalidId(int cpuid) {
-    return (cpuid > 0 && cpuid < GetHowManyCpus());
+    return (cpuid >= 0 && cpuid < GetHowManyCpus());
   }
 };
 

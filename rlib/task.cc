@@ -53,6 +53,10 @@ void TaskCtrl::Setup() {
     _task_struct[i].bottom_sub = t;
 
     _task_struct[i].state = TaskQueueState::kNotRunning;
+
+    DefferedTask *dt = virtmem_ctrl->New<DefferedTask>();
+    t->_next = nullptr;
+    _task_struct[i].dtop = dt;
   }
 }
 
@@ -110,6 +114,23 @@ void TaskCtrl::Run() {
       kassert(_task_struct[cpuid].state == TaskQueueState::kNotRunning
               || _task_struct[cpuid].state == TaskQueueState::kSleeped);
       _task_struct[cpuid].state = TaskQueueState::kRunning;
+    }
+    {
+      uint64_t time = timer->GetCntAfterPeriod(timer->ReadMainCnt(), kTaskExecutionInterval);
+      
+      DefferedTask *dt = _task_struct[cpuid].dtop;
+      while(dt->_next != nullptr) {
+	DefferedTask *dtt;
+	{
+	  Locker locker(_task_struct[cpuid].dlock);
+	  dtt = dt->_next;
+	  if (timer->IsGreater(dtt->_time, time)) {
+	    break;
+	  }
+	  dt->_next = dtt->_next;
+	}
+	Register(cpuid, &dtt->_task);
+      }
     }
     while (true){
       Task *t;
@@ -172,7 +193,7 @@ void TaskCtrl::Run() {
 }
 
 void TaskCtrl::Register(int cpuid, Task *task) {
-  if (cpuid < 0 || cpuid >= cpu_ctrl->GetHowManyCpus()) {
+  if (!cpu_ctrl->IsValidId(cpuid)) {
     return;
   }
   Locker locker(_task_struct[cpuid].lock);
@@ -188,6 +209,26 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   ForceWakeup(cpuid);
 }
 
+void TaskCtrl::RegisterDefferedTask(int cpuid, DefferedTask *task) {
+  if (!cpu_ctrl->IsValidId(cpuid)) {
+    return;
+  }
+  Locker locker(_task_struct[cpuid].dlock);
+  
+  DefferedTask *dt = _task_struct[cpuid].dtop;
+  while(dt->_next != nullptr) {
+    DefferedTask *dtt = dt->_next;
+    if (timer->IsGreater(dtt->_time, task->_time)) {
+      task->_next = dtt;
+      dt->_next = task;
+      break;
+    }
+    dt = dtt;
+  }
+
+  ForceWakeup(cpuid);
+}
+
 void TaskCtrl::ForceWakeup(int cpuid) {
 #ifdef __KERNEL__
   if (_task_struct[cpuid].state == TaskQueueState::kSleeped) {
@@ -198,13 +239,12 @@ void TaskCtrl::ForceWakeup(int cpuid) {
 #endif // __KERNEL__
 }
 
-
 Task::~Task() {
   kassert(_status == Status::kOutOfQueue);
 }
 
 void CountableTask::Inc() {
-  if (_cpuid == -1) {
+  if (!cpu_ctrl->IsValidId(_cpuid)) {
     return;
   }
   //TODO CASを使って高速化
@@ -223,5 +263,22 @@ void CountableTask::HandleSub(void *) {
     if (_cnt != 0) {
       task_ctrl->Register(_cpuid, &_task);
     }
+  }
+}
+
+void DefferedTask::Register(int cpuid, int us) {
+  Locker locker(_lock);
+  kassert(!_is_registered);
+  _is_registered = true;
+  _time = timer->GetCntAfterPeriod(timer->ReadMainCnt(), us);
+  task_ctrl->RegisterDefferedTask(cpuid, this);
+}
+
+void DefferedTask::HandleSub(void *) {
+  if (timer->IsTimePassed(_time)) {
+    _is_registered = false;
+    _func.Execute();
+  } else {
+    task_ctrl->Register(cpu_ctrl->GetId(), &_task);
   }
 }

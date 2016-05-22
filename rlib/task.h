@@ -26,8 +26,10 @@
 #include <global.h>
 #include <function.h>
 #include <spinlock.h>
+#include <timer.h>
 
 class Task;
+class DefferedTask;
 
 class TaskCtrl {
 public:
@@ -39,7 +41,6 @@ public:
   TaskCtrl() {}
   void Setup();
   void Register(int cpuid, Task *task);
-  void Register(int cpuid, Task *task, int us);
   // void Remove(int cpuid, Task *task);
   void Run();
   TaskQueueState GetState(int cpuid) {
@@ -49,6 +50,8 @@ public:
     return _task_struct[cpuid].state;
   }
  private:
+  friend DefferedTask;
+  void RegisterDefferedTask(int cpuid, DefferedTask *task);
   void ForceWakeup(int cpuid);
   struct TaskStruct {
     // queue
@@ -57,9 +60,15 @@ public:
     Task *top_sub;
     Task *bottom_sub;
     IntSpinLock lock;
-
     TaskQueueState state;
+
+    // for DefferedTask
+    DefferedTask *dtop;
+    IntSpinLock dlock;
   } *_task_struct = nullptr;
+  // this const value defines interval of wakeup task controller when all task sleeped
+  // (task controller doesn't sleep if there is any registered tasks)
+  static const int kTaskExecutionInterval = 1000; // us
 };
 
 class Task {
@@ -119,6 +128,33 @@ private:
   FunctionBase _func;
   int _cnt;
   int _cpuid;
+};
+
+// 遅延実行されるタスク 
+// 一度登録すると、実行されるまでは再登録はできない
+// 割り込み内からも呼び出し可能
+class DefferedTask {
+ public:
+  DefferedTask() {
+    ClassFunction<DefferedTask> func;
+    func.Init(this, &DefferedTask::HandleSub, nullptr);
+    _task.SetFunc(func);
+  }
+  virtual ~DefferedTask() {
+  }
+  void SetFunc(const GenericFunction &func) {
+    _func.Copy(func);
+  }
+  void Register(int cpuid, int us);
+ private:
+  void HandleSub(void *);
+  Task _task;
+  bool _is_registered = false;
+  uint64_t _time;
+  DefferedTask *_next;
+  FunctionBase _func;
+  IntSpinLock _lock;
+  friend TaskCtrl;
 };
 
 #endif /* __RAPH_LIB_TASK_H__ */

@@ -55,7 +55,7 @@ void TaskCtrl::Setup() {
     _task_struct[i].state = TaskQueueState::kNotRunning;
 
     DefferedTask *dt = virtmem_ctrl->New<DefferedTask>();
-    t->_next = nullptr;
+    dt->_next = nullptr;
     _task_struct[i].dtop = dt;
   }
 }
@@ -100,6 +100,7 @@ void TaskCtrl::Setup() {
 //   task->_status = Task::Status::kOutOfQueue;  
 // }
 
+
 void TaskCtrl::Run() {
   int cpuid = cpu_ctrl->GetId();
 #ifdef __KERNEL__
@@ -119,12 +120,16 @@ void TaskCtrl::Run() {
       uint64_t time = timer->GetCntAfterPeriod(timer->ReadMainCnt(), kTaskExecutionInterval);
       
       DefferedTask *dt = _task_struct[cpuid].dtop;
-      while(dt->_next != nullptr) {
+      while(true) {
 	DefferedTask *dtt;
 	{
 	  Locker locker(_task_struct[cpuid].dlock);
 	  dtt = dt->_next;
-	  if (timer->IsGreater(dtt->_time, time)) {
+	  if (dtt == nullptr) {
+	    break;
+	  }
+	  kassert(false);
+ 	  if (timer->IsGreater(dtt->_time, time)) {
 	    break;
 	  }
 	  dt->_next = dtt->_next;
@@ -213,17 +218,24 @@ void TaskCtrl::RegisterDefferedTask(int cpuid, DefferedTask *task) {
   if (!cpu_ctrl->IsValidId(cpuid)) {
     return;
   }
-  Locker locker(_task_struct[cpuid].dlock);
+  {
+    Locker locker(_task_struct[cpuid].dlock);
   
-  DefferedTask *dt = _task_struct[cpuid].dtop;
-  while(dt->_next != nullptr) {
-    DefferedTask *dtt = dt->_next;
-    if (timer->IsGreater(dtt->_time, task->_time)) {
-      task->_next = dtt;
-      dt->_next = task;
-      break;
+    DefferedTask *dt = _task_struct[cpuid].dtop;
+    while(true) {
+      DefferedTask *dtt = dt->_next;
+      if (dt->_next != nullptr) {
+      	task->_next = dtt;
+      	dt->_next = task;
+      	break;
+      }
+      if (timer->IsGreater(dtt->_time, task->_time)) {
+	task->_next = dtt;
+	dt->_next = task;
+	break;
+      }
+      dt = dtt;
     }
-    dt = dtt;
   }
 
   ForceWakeup(cpuid);

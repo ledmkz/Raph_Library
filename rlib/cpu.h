@@ -29,6 +29,11 @@ public:
   }
   virtual volatile int GetId() = 0;
   virtual int GetHowManyCpus() = 0;
+  bool IsInvalidId(int cpuid) {
+    if (cpuid < 0 || cpuid >= cpu_ctrl->GetHowManyCpus()) {
+      return;
+    }
+  }
 };
 
 #ifdef __KERNEL__

@@ -50,6 +50,7 @@ class Timer {
   // ビジーループタイムアウト
   // 最適化回避のためにできるだけこの関数を使うべき
   void BusyUwait(int us) {
+    volatile uint64_t cur = ReadMainCnt();
     volatile uint64_t end = GetCntAfterPeriod(cur, us);
     while(true) {
       volatile bool flag = IsTimePassed(end);

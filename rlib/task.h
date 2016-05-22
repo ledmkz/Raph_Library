@@ -49,6 +49,7 @@ public:
     return _task_struct[cpuid].state;
   }
  private:
+  void ForceWakeup(int cpuid);
   struct TaskStruct {
     // queue
     Task *top;

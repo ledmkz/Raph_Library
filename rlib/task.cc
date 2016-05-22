@@ -184,7 +184,11 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   _task_struct[cpuid].bottom_sub->_next = task;
   task->_prev = _task_struct[cpuid].bottom_sub;
   _task_struct[cpuid].bottom_sub = task;
+  
+  ForceWakeup(cpuid);
+}
 
+void TaskCtrl::ForceWakeup(int cpuid) {
 #ifdef __KERNEL__
   if (_task_struct[cpuid].state == TaskQueueState::kSleeped) {
     if (cpu_ctrl->GetId() != cpuid) {
@@ -193,6 +197,7 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   }
 #endif // __KERNEL__
 }
+
 
 Task::~Task() {
   kassert(_status == Status::kOutOfQueue);

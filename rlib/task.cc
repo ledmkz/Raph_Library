@@ -60,47 +60,6 @@ void TaskCtrl::Setup() {
   }
 }
 
-// void TaskCtrl::Remove(int cpuid, Task *task) {
-//   //TODO taskにcpuidを突っ込むべき
-//   kassert(task->_status != Task::Status::kGuard);
-//   Locker locker(_task_struct[cpuid].lock);
-//   switch(task->_status) {
-//   case Task::Status::kWaitingInQueue: {
-//     Task *next = task->_next;
-//     Task *prev = task->_prev;
-
-//     task->_next = nullptr;
-//     task->_prev = nullptr;
-
-//     kassert(prev != nullptr);
-//     prev->_next = next;
-
-//     if (next == nullptr) {
-//       if (task == _task_struct[cpuid].bottom) {
-//         _task_struct[cpuid].bottom = prev;
-//       } else if (task == _task_struct[cpuid].bottom_sub) {
-//         _task_struct[cpuid].bottom_sub = prev;
-//       } else {
-//         kassert(false);
-//       }
-//     }
-
-//     prev->_next = next;
-//     next->_prev = prev;
-//     break;
-//   }
-//   case Task::Status::kRunning:
-//   case Task::Status::kOutOfQueue: {
-//     break;
-//   }
-//   default:{
-//     kassert(false);
-//   }
-//   }
-//   task->_status = Task::Status::kOutOfQueue;  
-// }
-
-
 void TaskCtrl::Run() {
   int cpuid = cpu_ctrl->GetId();
 #ifdef __KERNEL__
@@ -134,6 +93,7 @@ void TaskCtrl::Run() {
 	  }
 	  dt->_next = dtt->_next;
 	}
+	dtt->_next = nullptr;
 	Register(cpuid, &dtt->_task);
       }
     }
@@ -205,6 +165,7 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   if (task->_status == Task::Status::kWaitingInQueue) {
     return;
   }
+  task->_cpuid;
   task->_next = nullptr;
   task->_status = Task::Status::kWaitingInQueue;
   _task_struct[cpuid].bottom_sub->_next = task;
@@ -212,6 +173,47 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   _task_struct[cpuid].bottom_sub = task;
   
   ForceWakeup(cpuid);
+}
+
+void TaskCtrl::Remove(Task *task) {
+  kassert(task->_status != Task::Status::kGuard);
+  int cpuid = task->_cpuid;
+  Locker locker(_task_struct[cpuid].lock);
+  switch(task->_status) {
+  case Task::Status::kWaitingInQueue: {
+    Task *next = task->_next;
+    Task *prev = task->_prev;
+
+    task->_next = nullptr;
+    task->_prev = nullptr;
+
+    kassert(prev != nullptr);
+    prev->_next = next;
+
+    if (next == nullptr) {
+      if (task == _task_struct[cpuid].bottom) {
+        _task_struct[cpuid].bottom = prev;
+      } else if (task == _task_struct[cpuid].bottom_sub) {
+        _task_struct[cpuid].bottom_sub = prev;
+      } else {
+        kassert(false);
+      }
+    } else {
+      next->_prev = prev;
+    }
+
+    prev->_next = next;
+    break;
+  }
+  case Task::Status::kRunning:
+  case Task::Status::kOutOfQueue: {
+    break;
+  }
+  default:{
+    kassert(false);
+  }
+  }
+  task->_status = Task::Status::kOutOfQueue;  
 }
 
 void TaskCtrl::RegisterDefferedTask(int cpuid, DefferedTask *task) {

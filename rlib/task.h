@@ -41,7 +41,7 @@ public:
   TaskCtrl() {}
   void Setup();
   void Register(int cpuid, Task *task);
-  // void Remove(int cpuid, Task *task);
+  void Remove(Task *task);
   void Run();
   TaskQueueState GetState(int cpuid) {
     if (_task_struct == nullptr) {
@@ -95,6 +95,7 @@ private:
   FunctionBase _func;
   Task *_next;
   Task *_prev;
+  int _cpuid;
   Status _status = Status::kOutOfQueue;
   friend TaskCtrl;
 };

@@ -54,7 +54,7 @@ void TaskCtrl::Setup() {
 
     _task_struct[i].state = TaskQueueState::kNotRunning;
 
-    DefferedTask *dt = virtmem_ctrl->New<DefferedTask>();
+    Callout *dt = virtmem_ctrl->New<Callout>();
     dt->_next = nullptr;
     _task_struct[i].dtop = dt;
   }
@@ -78,23 +78,29 @@ void TaskCtrl::Run() {
     {
       uint64_t time = timer->GetCntAfterPeriod(timer->ReadMainCnt(), kTaskExecutionInterval);
       
-      DefferedTask *dt = _task_struct[cpuid].dtop;
+      Callout *dt = _task_struct[cpuid].dtop;
       while(true) {
-	DefferedTask *dtt;
-	{
-	  Locker locker(_task_struct[cpuid].dlock);
-	  dtt = dt->_next;
-	  if (dtt == nullptr) {
-	    break;
-	  }
-	  kassert(false);
- 	  if (timer->IsGreater(dtt->_time, time)) {
-	    break;
-	  }
-	  dt->_next = dtt->_next;
-	}
-	dtt->_next = nullptr;
-	Register(cpuid, &dtt->_task);
+        Callout *dtt;
+        {
+          Locker locker(_task_struct[cpuid].dlock);
+          dtt = dt->_next;
+          if (dtt == nullptr) {
+            break;
+          }
+          if (timer->IsGreater(dtt->_time, time)) {
+            break;
+          }
+          if (dtt->_lock.Trylock() < 0) {
+            // retry
+            continue;
+          }
+          dt->_next = dtt->_next;
+        }
+        dtt->_next = nullptr;
+        dtt->_state = Callout::CalloutState::kTaskQueue;
+        Register(cpuid, &dtt->_task);
+        dtt->_lock.Unlock();
+        break;
       }
     }
     while (true){
@@ -147,9 +153,9 @@ void TaskCtrl::Run() {
       }
     }
 #ifdef __KERNEL__
-    if (_task_struct[cpuid].state == TaskQueueState::kNotRunning) {
+    // if (_task_struct[cpuid].state == TaskQueueState::kNotRunning) {
       apic_ctrl->StartTimer();
-    }
+    // }
     asm volatile("hlt");
 #else
     usleep(10);
@@ -165,7 +171,7 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   if (task->_status == Task::Status::kWaitingInQueue) {
     return;
   }
-  task->_cpuid;
+  task->_cpuid = cpuid;
   task->_next = nullptr;
   task->_status = Task::Status::kWaitingInQueue;
   _task_struct[cpuid].bottom_sub->_next = task;
@@ -216,31 +222,65 @@ void TaskCtrl::Remove(Task *task) {
   task->_status = Task::Status::kOutOfQueue;  
 }
 
-void TaskCtrl::RegisterDefferedTask(int cpuid, DefferedTask *task) {
+void TaskCtrl::RegisterCallout(Callout *task) {
+  int cpuid = task->_cpuid;
   if (!cpu_ctrl->IsValidId(cpuid)) {
     return;
   }
   {
     Locker locker(_task_struct[cpuid].dlock);
   
-    DefferedTask *dt = _task_struct[cpuid].dtop;
+    Callout *dt = _task_struct[cpuid].dtop;
     while(true) {
-      DefferedTask *dtt = dt->_next;
+      Callout *dtt = dt->_next;
       if (dt->_next != nullptr) {
+        task->_state = Callout::CalloutState::kCalloutQueue;
       	task->_next = dtt;
       	dt->_next = task;
       	break;
       }
       if (timer->IsGreater(dtt->_time, task->_time)) {
-	task->_next = dtt;
-	dt->_next = task;
-	break;
+        task->_state = Callout::CalloutState::kCalloutQueue;
+        task->_next = dtt;
+        dt->_next = task;
+        break;
       }
       dt = dtt;
     }
   }
 
   ForceWakeup(cpuid);
+}
+
+void TaskCtrl::CancelCallout(Callout *task) {
+  int cpuid = task->_cpuid;
+  switch(task->_state) {
+  case Callout::CalloutState::kCalloutQueue: {
+    Locker locker(_task_struct[cpuid].dlock);
+    Callout *dt = _task_struct[cpuid].dtop;
+    while(dt->_next != nullptr) {
+      Callout *dtt = dt->_next;
+      if (dtt == task) {
+        dt->_next = dtt->_next;
+        break;
+      }
+      dt = dtt;
+    }
+    task->_next = nullptr;
+    break;
+  }
+  case Callout::CalloutState::kTaskQueue: {
+    Remove(&task->_task);
+    break;
+  }
+  case Callout::CalloutState::kHandling:
+  case Callout::CalloutState::kStopped: {
+    break;
+  }
+  default:
+    kassert(false);
+  }
+  task->_state = Callout::CalloutState::kStopped;
 }
 
 void TaskCtrl::ForceWakeup(int cpuid) {
@@ -280,18 +320,27 @@ void CountableTask::HandleSub(void *) {
   }
 }
 
-void DefferedTask::Register(int cpuid, int us) {
-  Locker locker(_lock);
-  kassert(!_is_registered);
-  _is_registered = true;
-  _time = timer->GetCntAfterPeriod(timer->ReadMainCnt(), us);
-  task_ctrl->RegisterDefferedTask(cpuid, this);
+void Callout::SetHandler(uint32_t us) {
+  SetHandler(cpu_ctrl->GetId(), us);
 }
 
-void DefferedTask::HandleSub(void *) {
+void Callout::SetHandler(int cpuid, int us) {
+  Locker locker(_lock);
+  _time = timer->GetCntAfterPeriod(timer->ReadMainCnt(), us);
+  _cpuid = cpuid;
+  task_ctrl->RegisterCallout(this);
+}
+
+void Callout::Cancel() {
+  Locker locker(_lock);
+  task_ctrl->CancelCallout(this);
+}
+
+void Callout::HandleSub(void *) {
   if (timer->IsTimePassed(_time)) {
-    _is_registered = false;
+    _state = CalloutState::kHandling;
     _func.Execute();
+    _state = CalloutState::kStopped;
   } else {
     task_ctrl->Register(cpu_ctrl->GetId(), &_task);
   }

@@ -29,7 +29,7 @@
 #include <timer.h>
 
 class Task;
-class DefferedTask;
+class Callout;
 
 class TaskCtrl {
 public:
@@ -50,8 +50,9 @@ public:
     return _task_struct[cpuid].state;
   }
  private:
-  friend DefferedTask;
-  void RegisterDefferedTask(int cpuid, DefferedTask *task);
+  friend Callout;
+  void RegisterCallout(Callout *task);
+  void CancelCallout(Callout *task);
   void ForceWakeup(int cpuid);
   struct TaskStruct {
     // queue
@@ -62,8 +63,8 @@ public:
     IntSpinLock lock;
     TaskQueueState state;
 
-    // for DefferedTask
-    DefferedTask *dtop;
+    // for Callout
+    Callout *dtop;
     IntSpinLock dlock;
   } *_task_struct = nullptr;
   // this const value defines interval of wakeup task controller when all task sleeped
@@ -132,30 +133,93 @@ private:
 };
 
 // 遅延実行されるタスク 
-// 一度登録すると、実行されるまでは再登録はできない
+// 一度登録すると、実行されるかキャンセルするまでは再登録はできない
 // 割り込み内からも呼び出し可能
-class DefferedTask {
- public:
-  DefferedTask() {
-    ClassFunction<DefferedTask> func;
-    func.Init(this, &DefferedTask::HandleSub, nullptr);
+class Callout {
+public:
+  enum class CalloutState {
+    kCalloutQueue,
+    kTaskQueue,
+    kHandling,
+    kStopped,
+  };
+  Callout() {
+    ClassFunction<Callout> func;
+    func.Init(this, &Callout::HandleSub, nullptr);
     _task.SetFunc(func);
   }
-  virtual ~DefferedTask() {
+  virtual ~Callout() {
   }
-  void SetFunc(const GenericFunction &func) {
+  void Init(const GenericFunction &func) {
     _func.Copy(func);
   }
-  void Register(int cpuid, int us);
- private:
+  volatile bool IsHandling() {
+    return (_state == CalloutState::kHandling);
+  }
+  volatile bool CanExecute() {
+    return _func.CanExecute();
+  }
+  void SetHandler(uint32_t us);
+  void SetHandler(int cpuid, int us);
+  void Cancel();
+private:
   void HandleSub(void *);
+  int _cpuid;
   Task _task;
-  bool _is_registered = false;
   uint64_t _time;
-  DefferedTask *_next;
+  Callout *_next;
   FunctionBase _func;
   IntSpinLock _lock;
   friend TaskCtrl;
+  CalloutState _state = CalloutState::kStopped;
 };
+
+#include "spinlock.h"
+
+class LckCallout {
+ public:
+  LckCallout() {
+    ClassFunction<LckCallout> func;
+    func.Init(this, &LckCallout::HandleSub, nullptr);
+    callout.Init(func);
+  }
+  virtual ~LckCallout() {
+  }
+  void Init(const GenericFunction &func) {
+    _func.Copy(func);
+  }
+  void SetLock(SpinLock *lock) {
+    _lock = lock;
+  }
+  volatile bool IsHandling() {
+    return callout.IsHandling();
+  }
+  volatile bool CanExecute() {
+    return callout.CanExecute();
+  }
+  void SetHandler(uint32_t us) {
+    callout.SetHandler(us);
+  }
+  void SetHandler(int cpuid, int us) {
+    callout.SetHandler(cpuid, us);
+  }
+  void Cancel() {
+    callout.Cancel();
+  }
+ private:
+  void HandleSub(void *) {
+    if (_lock != nullptr) {
+      _lock->Lock();
+    }
+    _func.Execute();
+    if (_lock != nullptr) {
+      _lock->Unlock();
+    }
+  }
+  SpinLock *_lock = nullptr;
+  Callout callout;
+  FunctionBase _func;
+};
+
 
 #endif /* __RAPH_LIB_TASK_H__ */

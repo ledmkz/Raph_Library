@@ -60,17 +60,13 @@ public:
     Task *bottom;
     Task *top_sub;
     Task *bottom_sub;
-#ifdef __KERNEL__
     IntSpinLock lock;
-#else
-    SpinLock lock;
-#endif // __KERNEL__
 
     TaskQueueState state;
 
     // for Callout
-    Callout *dtop;
     IntSpinLock dlock;
+    Callout *dtop;
   } *_task_struct = nullptr;
   // this const value defines interval of wakeup task controller when all task sleeped
   // (task controller doesn't sleep if there is any registered tasks)

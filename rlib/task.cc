@@ -63,7 +63,7 @@ void TaskCtrl::Setup() {
 void TaskCtrl::Run() {
   int cpuid = cpu_ctrl->GetId();
 #ifdef __KERNEL__
-  apic_ctrl->SetupTimer();
+  apic_ctrl->SetupTimer(kTaskExecutionInterval);
 #endif // __KERNEL__
   while(true) {
     {

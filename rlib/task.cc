@@ -26,6 +26,7 @@
 #ifdef __KERNEL__
 #include <apic.h>
 #else
+#include <raph.h>
 #include <unistd.h>
 #endif // __KERNEL__
 

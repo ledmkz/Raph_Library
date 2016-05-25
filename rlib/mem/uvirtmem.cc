@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2016 Project Raphine
+ * Copyright (c) 2016 Raphine Project
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,39 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Author: Liva
+ * Author: Levelfour
  * 
  */
 
-#ifndef __RAPH_LIB_CPU_H__
-#define __RAPH_LIB_CPU_H__
+#ifndef __KERNEL__
 
-class CpuCtrlInterface {
-public:
-  virtual ~CpuCtrlInterface() {
-  }
-  virtual volatile int GetId() = 0;
-  virtual int GetHowManyCpus() = 0;
-  bool IsValidId(int cpuid) {
-    return (cpuid >= 0 && cpuid < GetHowManyCpus());
-  }
-};
+#include <mem/uvirtmem.h>
 
-#ifdef __KERNEL__
-#include <apic.h>
-#include <global.h>
+virt_addr UVirtmemCtrl::Alloc(size_t size) {
+  return reinterpret_cast<virt_addr>(new uint8_t[size]);
+}
 
-class CpuCtrl : public CpuCtrlInterface {
-public:
-  virtual volatile int GetId() override {
-    return apic_ctrl->GetCpuId();
-  }
-  virtual int GetHowManyCpus() override {
-    return apic_ctrl->GetHowManyCpus();
-  }
-};
-#else
-#include <thread.h>
-#endif /* __KERNEL__ */
+void UVirtmemCtrl::Free(virt_addr addr) {
+  delete[] reinterpret_cast<uint8_t*>(addr);
+}
 
-#endif /* __RAPH_LIB_CPU_H__ */
+#endif // !__KERNEL__

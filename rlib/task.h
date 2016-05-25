@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2016 Project Raphine
+ * Copyright (c) 2016 Raphine Project
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,8 +26,10 @@
 #include <global.h>
 #include <function.h>
 #include <spinlock.h>
+#include <timer.h>
 
 class Task;
+class Callout;
 
 class TaskCtrl {
 public:
@@ -39,7 +41,7 @@ public:
   TaskCtrl() {}
   void Setup();
   void Register(int cpuid, Task *task);
-  // void Remove(int cpuid, Task *task);
+  void Remove(Task *task);
   void Run();
   TaskQueueState GetState(int cpuid) {
     if (_task_struct == nullptr) {
@@ -48,6 +50,10 @@ public:
     return _task_struct[cpuid].state;
   }
  private:
+  friend Callout;
+  void RegisterCallout(Callout *task);
+  void CancelCallout(Callout *task);
+  void ForceWakeup(int cpuid);
   struct TaskStruct {
     // queue
     Task *top;
@@ -61,13 +67,19 @@ public:
 #endif // __KERNEL__
 
     TaskQueueState state;
+
+    // for Callout
+    Callout *dtop;
+    IntSpinLock dlock;
   } *_task_struct = nullptr;
+  // this const value defines interval of wakeup task controller when all task sleeped
+  // (task controller doesn't sleep if there is any registered tasks)
+  static const int kTaskExecutionInterval = 1000; // us
 };
 
 class Task {
 public:
   Task() {
-    _cnt = 0;
   }
   virtual ~Task();
   void SetFunc(const GenericFunction &func) {
@@ -82,16 +94,137 @@ public:
   Status GetStatus() {
     return _status;
   }
+private:
   void Execute() {
     _func.Execute();
   }
-private:
   FunctionBase _func;
   Task *_next;
   Task *_prev;
+  int _cpuid;
   Status _status = Status::kOutOfQueue;
-  int _cnt;
   friend TaskCtrl;
 };
+ 
+// Taskがキューに積まれている間にインクリメント可能
+// 割り込み内からも呼び出せる
+// ただし、一定時間後に立ち上げる事や割り当てcpuidを変える事はできない
+class CountableTask {
+public:
+  CountableTask() {
+    _cnt = 0;
+    _cpuid = -1;
+    ClassFunction<CountableTask> func;
+    func.Init(this, &CountableTask::HandleSub, nullptr);
+    _task.SetFunc(func);
+  }
+  virtual ~CountableTask() {
+  }
+  void SetFunc(int cpuid, const GenericFunction &func) {
+    _cpuid = cpuid;
+    _func.Copy(func);
+  }
+  Task::Status GetStatus() {
+    return _task.GetStatus();
+  }
+  void Inc();
+private:
+  void HandleSub(void *);
+  Task _task;
+  IntSpinLock _lock;
+  FunctionBase _func;
+  int _cnt;
+  int _cpuid;
+};
+
+// 遅延実行されるタスク 
+// 一度登録すると、実行されるかキャンセルするまでは再登録はできない
+// 割り込み内からも呼び出し可能
+class Callout {
+public:
+  enum class CalloutState {
+    kCalloutQueue,
+    kTaskQueue,
+    kHandling,
+    kStopped,
+  };
+  Callout() {
+    ClassFunction<Callout> func;
+    func.Init(this, &Callout::HandleSub, nullptr);
+    _task.SetFunc(func);
+  }
+  virtual ~Callout() {
+  }
+  void Init(const GenericFunction &func) {
+    _func.Copy(func);
+  }
+  volatile bool IsHandling() {
+    return (_state == CalloutState::kHandling);
+  }
+  volatile bool CanExecute() {
+    return _func.CanExecute();
+  }
+  void SetHandler(uint32_t us);
+  void SetHandler(int cpuid, int us);
+  void Cancel();
+private:
+  void HandleSub(void *);
+  int _cpuid;
+  Task _task;
+  uint64_t _time;
+  Callout *_next;
+  FunctionBase _func;
+  IntSpinLock _lock;
+  friend TaskCtrl;
+  CalloutState _state = CalloutState::kStopped;
+};
+
+#include "spinlock.h"
+
+class LckCallout {
+ public:
+  LckCallout() {
+    ClassFunction<LckCallout> func;
+    func.Init(this, &LckCallout::HandleSub, nullptr);
+    callout.Init(func);
+  }
+  virtual ~LckCallout() {
+  }
+  void Init(const GenericFunction &func) {
+    _func.Copy(func);
+  }
+  void SetLock(SpinLock *lock) {
+    _lock = lock;
+  }
+  volatile bool IsHandling() {
+    return callout.IsHandling();
+  }
+  volatile bool CanExecute() {
+    return callout.CanExecute();
+  }
+  void SetHandler(uint32_t us) {
+    callout.SetHandler(us);
+  }
+  void SetHandler(int cpuid, int us) {
+    callout.SetHandler(cpuid, us);
+  }
+  void Cancel() {
+    callout.Cancel();
+  }
+ private:
+  void HandleSub(void *) {
+    if (_lock != nullptr) {
+      _lock->Lock();
+    }
+    _func.Execute();
+    if (_lock != nullptr) {
+      _lock->Unlock();
+    }
+  }
+  SpinLock *_lock = nullptr;
+  Callout callout;
+  FunctionBase _func;
+};
+
 
 #endif /* __RAPH_LIB_TASK_H__ */

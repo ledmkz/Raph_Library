@@ -92,6 +92,12 @@ protected:
   volatile int _id;
   bool _did_stop_interrupt = false;
 };
+#else
+class IntSpinLock : public SpinLockInterface {
+public:
+  IntSpinLock() {}
+  virtual ~IntSpinLock() {}
+};
 #endif // __KERNEL__
 
 class DebugSpinLock : public SpinLock {

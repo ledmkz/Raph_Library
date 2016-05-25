@@ -29,6 +29,9 @@ public:
   }
   virtual volatile int GetId() = 0;
   virtual int GetHowManyCpus() = 0;
+  bool IsValidId(int cpuid) {
+    return (cpuid >= 0 && cpuid < GetHowManyCpus());
+  }
 };
 
 #ifdef __KERNEL__

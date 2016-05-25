@@ -152,10 +152,16 @@ void TaskCtrl::Run() {
         _task_struct[cpuid].state = TaskQueueState::kSleeped;
       }
     }
+    if (_task_struct[cpuid].state == TaskQueueState::kSleeped) {
+      Locker locker(_task_struct[cpuid].dlock);
+      if (_task_struct[cpuid].dtop->_next != nullptr) {
+        _task_struct[cpuid].state = TaskQueueState::kNotRunning;
+      }
+    }
 #ifdef __KERNEL__
-    // if (_task_struct[cpuid].state == TaskQueueState::kNotRunning) {
+    if (_task_struct[cpuid].state == TaskQueueState::kNotRunning) {
       apic_ctrl->StartTimer();
-    // }
+    }
     asm volatile("hlt");
 #else
     usleep(10);

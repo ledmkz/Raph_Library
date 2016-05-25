@@ -60,17 +60,13 @@ public:
     Task *bottom;
     Task *top_sub;
     Task *bottom_sub;
-#ifdef __KERNEL__
     IntSpinLock lock;
-    IntSpinLock dlock; // for Callout
-#else
-    SpinLock lock;
-    SpinLock dlock;
-#endif // __KERNEL__
 
     TaskQueueState state;
 
-    Callout *dtop;  // fot Callout
+    // for Callout
+    IntSpinLock dlock;
+    Callout *dtop;
   } *_task_struct = nullptr;
   // this const value defines interval of wakeup task controller when all task sleeped
   // (task controller doesn't sleep if there is any registered tasks)
@@ -131,11 +127,7 @@ public:
 private:
   void HandleSub(void *);
   Task _task;
-#ifdef __KERNEL__
   IntSpinLock _lock;
-#else
-  SpinLock _lock;
-#endif // __KERNEL__
   FunctionBase _func;
   int _cnt;
   int _cpuid;
@@ -178,11 +170,7 @@ private:
   uint64_t _time;
   Callout *_next;
   FunctionBase _func;
-#ifdef __KERNEL__
   IntSpinLock _lock;
-#else
-  SpinLock _lock;
-#endif // __KERNEL__
   friend TaskCtrl;
   CalloutState _state = CalloutState::kStopped;
 };

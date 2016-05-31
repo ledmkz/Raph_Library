@@ -56,6 +56,7 @@ public:
     c->~T();
     Free(reinterpret_cast<virt_addr>(c));
   }
+  virtual virt_addr Sbrk(int64_t increment) = 0;
 private:
 };
 

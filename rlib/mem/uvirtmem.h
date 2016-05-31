@@ -32,6 +32,9 @@ class UVirtmemCtrl : public VirtmemCtrl {
 public:
   virtual virt_addr Alloc(size_t size) override;
   virtual void Free(virt_addr addr) override;
+  virtual virt_addr Sbrk(int64_t increment) override {
+    abort();
+  }
 };
 
 #endif // !__KERNEL__

@@ -108,10 +108,17 @@ void PoolingSocket::Poll(void *arg) {
 
     // transmit packet (if non-sent packet remains in buffer)
     if (_tx_buffered.Pop(packet)) {
-      int32_t rval = write(_client, packet->buf, packet->len);
-      if (rval == packet->len) {
-        ReuseTxBuffer(packet);
+      int32_t rval, residue = packet->len;
+      uint8_t *ptr = packet->buf;
+
+      while (residue > 0) {
+        // send until EOF (rval == 0)
+        rval = write(_client, ptr, residue);
+        residue -= rval;
+        ptr += rval;
       }
+
+      ReuseTxBuffer(packet);
     }
   }
 }

@@ -39,11 +39,12 @@ class PoolingSocket : public SocketInterface {
 public:
   static const uint32_t kMaxPacketLength = 1460;
   struct Packet {
-    int32_t len;
-    uint8_t buf[kMaxPacketLength];
+    int32_t adr; // recipient number
+    int32_t len; // packet lenght
+    uint8_t buf[kMaxPacketLength]; // packet content body
   };
 
-  PoolingSocket(int port) : _port(port), _client(-1) {}
+  PoolingSocket(int port) : _port(port) {}
   virtual int32_t Open() override;
   virtual void SetReceiveCallback(int cpuid, const Function &func) override {
     _rx_buffered.SetFunction(cpuid, func);
@@ -95,10 +96,15 @@ private:
   // TCP socket
   int _socket;
   // socket descriptor of the accepted client
-  int _client;
+  static const int32_t kMaxClientNumber = 32;
+  int _client[kMaxClientNumber];
 
   fd_set _fds;
   struct timeval _timeout;
+
+  int32_t Capacity();
+  int32_t GetAvailableClientIndex();
+  int32_t GetNfds();
 };
 
 #endif // !__KERNEL__

@@ -94,16 +94,25 @@ private:
   // listening port
   int _port;
   // TCP socket
-  int _socket;
-  // socket descriptor of the accepted client
-  static const int32_t kMaxClientNumber = 32;
-  int _client[kMaxClientNumber];
+  int _tcp_socket;
+  // UDP socket
+  int _udp_socket;
+  // TCP socket descriptor of the accepted client
+  static const int32_t kMaxClientNumber = 256;
+  int _tcp_client[kMaxClientNumber];
+  // UDP address information
+  static const int32_t kUDPAddressOffset = 0x4000;
+  struct address_info {
+    struct sockaddr_in addr;
+    bool enabled;
+  } _udp_client[kMaxClientNumber];
 
   fd_set _fds;
   struct timeval _timeout;
 
   int32_t Capacity();
-  int32_t GetAvailableClientIndex();
+  int32_t GetAvailableTcpClientIndex();
+  int32_t GetAvailableUdpClientIndex();
   int32_t GetNfds();
 };
 

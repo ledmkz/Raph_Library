@@ -29,35 +29,48 @@
 #include <fcntl.h>
 
 int32_t PoolingSocket::Open() {
-  if ((_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+  if ((_tcp_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("");
-    return _socket;
-  } else {
-    // initialize
-    for (int32_t i = 0; i < kMaxClientNumber; i++) {
-      _client[i] = -1; // fd not in use
-    }
-
-    // turn on non-blocking mode
-    int flag = fcntl(_socket, F_GETFL);
-    fcntl(_socket, F_SETFL, flag | O_NONBLOCK);
-
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(_port);
-    bind(_socket, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr));
-
-    FD_ZERO(&_fds);
-
-    _timeout.tv_sec = 0;
-    _timeout.tv_usec = 0;
-
-    InitPacketBuffer();
-    SetupPollingHandler();
-    return 0;
+    return _tcp_socket;
   }
+
+  if ((_udp_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+    perror("");
+    return _udp_socket;
+  }
+  
+  // initialize
+  for (int32_t i = 0; i < kMaxClientNumber; i++) {
+    _tcp_client[i] = -1; // fd not in use
+  }
+  for (int32_t i = 0; i < kMaxClientNumber; i++) {
+    _udp_client[i].enabled = false;
+  }
+
+  // turn on non-blocking mode
+  int flag = fcntl(_tcp_socket, F_GETFL);
+  fcntl(_tcp_socket, F_SETFL, flag | O_NONBLOCK);
+
+  flag = fcntl(_udp_socket, F_GETFL);
+  fcntl(_udp_socket, F_SETFL, flag | O_NONBLOCK);
+
+  struct sockaddr_in addr;
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_port = htons(_port);
+  bind(_tcp_socket, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr));
+  bind(_udp_socket, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr));
+
+  FD_ZERO(&_fds);
+
+  _timeout.tv_sec = 0;
+  _timeout.tv_usec = 0;
+
+  InitPacketBuffer();
+  SetupPollingHandler();
+
+  return 0;
 }
 
 void PoolingSocket::InitPacketBuffer() {
@@ -79,19 +92,19 @@ void PoolingSocket::InitPacketBuffer() {
 void PoolingSocket::Poll(void *arg) {
   int32_t capacity = Capacity();
   if (capacity > 0) {
-    listen(_socket, capacity);
+    listen(_tcp_socket, capacity);
 
-    int32_t index = GetAvailableClientIndex();
+    int32_t index = GetAvailableTcpClientIndex();
 
-    // at this point, _client[index] is not used
+    // at this point, _tcp_client[index] is not used
 
-    if ((_client[index] = accept(_socket, nullptr, nullptr)) > 0) {
-      FD_SET(_client[index], &_fds);
+    if ((_tcp_client[index] = accept(_tcp_socket, nullptr, nullptr)) > 0) {
+      FD_SET(_tcp_client[index], &_fds);
     }
   }
 
   {
-    // receive sequence
+    // TCP receive sequence
     Packet *packet;
 
     fd_set tmp_fds;
@@ -100,14 +113,14 @@ void PoolingSocket::Poll(void *arg) {
     // receive packet (non-blocking)
     if (select(GetNfds(), &tmp_fds, 0, 0, &_timeout) >= 0) {
       for (int32_t i = 0; i < kMaxClientNumber; i++) {
-        if (_client[i] == -1) {
+        if (_tcp_client[i] == -1) {
           // this socket is not used now
           continue;
         }
 
-        if (FD_ISSET(_client[i], &tmp_fds)) {
+        if (FD_ISSET(_tcp_client[i], &tmp_fds)) {
           if (GetRxPacket(packet)) {
-            int32_t rval = read(_client[i], packet->buf, kMaxPacketLength);
+            int32_t rval = read(_tcp_client[i], packet->buf, kMaxPacketLength);
             if (rval > 0) {
               packet->adr = i;
               packet->len = rval;
@@ -115,9 +128,9 @@ void PoolingSocket::Poll(void *arg) {
             } else {
               if (rval == 0) {
                 // socket may be closed by foreign host
-                close(_client[i]);
-                FD_CLR(_client[i], &_fds);
-                _client[i] = -1;
+                close(_tcp_client[i]);
+                FD_CLR(_tcp_client[i], &_fds);
+                _tcp_client[i] = -1;
               }
 
               ReuseRxBuffer(packet);
@@ -127,7 +140,25 @@ void PoolingSocket::Poll(void *arg) {
       }
     }
   }
-  
+
+  {
+    // UDP receive sequence
+    Packet *packet;
+    int32_t index = GetAvailableUdpClientIndex();
+
+    if (index != -1 && GetRxPacket(packet)) {
+      socklen_t sin_size;
+      int32_t rval = recvfrom(_udp_socket, packet->buf, kMaxPacketLength, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[index]), &sin_size);
+      if (rval > 0) {
+        packet->adr = kUDPAddressOffset + index;
+        packet->len = rval;
+        _rx_buffered.Push(packet);
+      } else {
+        ReuseRxBuffer(packet);
+      }
+    }
+  }
+
   {
     // transmit sequence
     Packet *packet;
@@ -135,15 +166,20 @@ void PoolingSocket::Poll(void *arg) {
     // transmit packet (if non-sent packet remains in buffer)
     if (_tx_buffered.Pop(packet)) {
       int32_t adr = packet->adr;
+      int32_t uadr = adr - kUDPAddressOffset;
 
-      // check if the address number is valid
-      if (0 <= adr && adr < kMaxClientNumber && _client[adr] != -1) {
+      if (0 <= uadr && uadr < kMaxClientNumber && _udp_client[uadr].enabled) {
+        // the address number is valid UDP address
+        sendto(_udp_socket, packet->buf, packet->len, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[uadr]), sizeof(_udp_client[uadr]));
+        ReuseTxBuffer(packet);
+      } else if (0 <= adr && adr < kMaxClientNumber && _tcp_client[adr] != -1) {
+        // the address number is valid TCP address
         int32_t rval, residue = packet->len;
         uint8_t *ptr = packet->buf;
 
         while (residue > 0) {
           // send until EOF (rval == 0)
-          rval = write(_client[adr], ptr, residue);
+          rval = write(_tcp_client[adr], ptr, residue);
           residue -= rval;
           ptr += rval;
         }
@@ -166,7 +202,7 @@ int32_t PoolingSocket::Capacity() {
   int32_t capacity = 0;
 
   for (int32_t i = 0; i < kMaxClientNumber; i++) {
-    if (_client[i] == -1) {
+    if (_tcp_client[i] == -1) {
       capacity++;
     }
   }
@@ -174,10 +210,21 @@ int32_t PoolingSocket::Capacity() {
   return capacity;
 }
 
-int32_t PoolingSocket::GetAvailableClientIndex() {
-  // return index of the first unused client
+int32_t PoolingSocket::GetAvailableTcpClientIndex() {
+  // return index of the first unused TCP client
   for (int32_t i = 0; i < kMaxClientNumber; i++) {
-    if (_client[i] == -1) {
+    if (_tcp_client[i] == -1) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+int32_t PoolingSocket::GetAvailableUdpClientIndex() {
+  // return index of the first unused UDP client
+  for (int32_t i = 0; i < kMaxClientNumber; i++) {
+    if (!_udp_client[i].enabled) {
       return i;
     }
   }
@@ -190,8 +237,8 @@ int32_t PoolingSocket::GetNfds() {
   int32_t max_fd = -1;
 
   for (int32_t i = 0; i < kMaxClientNumber; i++) {
-    if (_client[i] > max_fd) {
-      max_fd = _client[i];
+    if (_tcp_client[i] > max_fd) {
+      max_fd = _tcp_client[i];
     }
   }
 

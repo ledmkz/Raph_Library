@@ -73,6 +73,21 @@ int32_t PoolingSocket::Open() {
   return 0;
 }
 
+int32_t PoolingSocket::RegisterUdpAddress(uint32_t ipaddr, uint16_t port) {
+  int32_t index = GetAvailableUdpClientIndex();
+
+  if (index == -1) {
+    return -1;
+  } else {
+    _udp_client[index].addr.sin_family = AF_INET;
+    _udp_client[index].addr.sin_port = htons(port);
+    _udp_client[index].addr.sin_addr.s_addr = ipaddr;
+    _udp_client[index].time_to_live = kDefaultTtlValue;
+    _udp_client[index].enabled = true;
+    return index;
+  }
+}
+
 void PoolingSocket::InitPacketBuffer() {
   while (!_tx_reserved.IsFull()) {
     Packet *packet = reinterpret_cast<Packet *>(virtmem_ctrl->Alloc(sizeof(Packet)));
@@ -148,10 +163,17 @@ void PoolingSocket::Poll(void *arg) {
 
     if (index != -1 && GetRxPacket(packet)) {
       socklen_t sin_size;
-      int32_t rval = recvfrom(_udp_socket, packet->buf, kMaxPacketLength, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[index]), &sin_size);
+      int32_t rval = recvfrom(_udp_socket, packet->buf, kMaxPacketLength, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[index].addr), &sin_size);
       if (rval > 0) {
         packet->adr = kUDPAddressOffset + index;
         packet->len = rval;
+
+        // register UDP address info
+        _udp_client[index].time_to_live = kDefaultTtlValue;
+        _udp_client[index].enabled = true;
+
+        RefreshTtl();
+
         _rx_buffered.Push(packet);
       } else {
         ReuseRxBuffer(packet);
@@ -165,21 +187,20 @@ void PoolingSocket::Poll(void *arg) {
 
     // transmit packet (if non-sent packet remains in buffer)
     if (_tx_buffered.Pop(packet)) {
-      int32_t adr = packet->adr;
-      int32_t uadr = adr - kUDPAddressOffset;
 
-      if (0 <= uadr && uadr < kMaxClientNumber && _udp_client[uadr].enabled) {
+      if (IsValidUdpClientIndex(packet->adr)) {
         // the address number is valid UDP address
-        sendto(_udp_socket, packet->buf, packet->len, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[uadr]), sizeof(_udp_client[uadr]));
+        int32_t index = packet->adr - kUDPAddressOffset;
+        sendto(_udp_socket, packet->buf, packet->len, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[index].addr), sizeof(_udp_client[index].addr));
         ReuseTxBuffer(packet);
-      } else if (0 <= adr && adr < kMaxClientNumber && _tcp_client[adr] != -1) {
+      } else if (IsValidTcpClientIndex(packet->adr)) {
         // the address number is valid TCP address
         int32_t rval, residue = packet->len;
         uint8_t *ptr = packet->buf;
 
         while (residue > 0) {
           // send until EOF (rval == 0)
-          rval = write(_tcp_client[adr], ptr, residue);
+          rval = write(_tcp_client[packet->adr], ptr, residue);
           residue -= rval;
           ptr += rval;
         }
@@ -243,6 +264,34 @@ int32_t PoolingSocket::GetNfds() {
   }
 
   return max_fd + 1;
+}
+
+bool PoolingSocket::IsValidTcpClientIndex(int32_t index) {
+  if (0 <= index && index < kMaxClientNumber && _tcp_client[index] != -1) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool PoolingSocket::IsValidUdpClientIndex(int32_t index) {
+  int32_t uadr = index - kUDPAddressOffset;
+  if (0 <= uadr && uadr < kMaxClientNumber && _udp_client[uadr].enabled) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void PoolingSocket::RefreshTtl() {
+  // decrease ttl value, and if it reaches to 0, clear the address info
+  for (int32_t i = 0; i < kMaxClientNumber; i++) {
+    if (_udp_client[i].enabled) {
+      if (--_udp_client[i].time_to_live <= 0) {
+        _udp_client[i].enabled = false;
+      }
+    }
+  }
 }
 
 #endif // !__KERNEL__

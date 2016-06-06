@@ -50,6 +50,11 @@ public:
     _rx_buffered.SetFunction(cpuid, func);
   }
 
+  // pass 32bit-converted IP address to 1st-arg (use inet_addr)
+  // return value is client number, but
+  // if there is no sufficient capacity, this function returns -1
+  int32_t RegisterUdpAddress(uint32_t ipaddr, uint16_t port);
+
   void ReuseRxBuffer(Packet *packet) {
     kassert(_rx_reserved.Push(packet));
   }
@@ -68,7 +73,14 @@ public:
     return _rx_reserved.Pop(packet);
   }
   bool TransmitPacket(Packet *packet) {
-    return _tx_buffered.Push(packet);
+    if(IsValidClientIndex(packet->adr)) {
+      return _tx_buffered.Push(packet);
+    } else {
+      // Invalid client number. Maybe
+      //   - your specified client number is non-sense
+      //   - UDP address info has been cleared (please re-register)
+      return false;
+    }
   }
   bool ReceivePacket(Packet *&packet) {
     return _rx_buffered.Pop(packet);
@@ -102,9 +114,11 @@ private:
   int _tcp_client[kMaxClientNumber];
   // UDP address information
   static const int32_t kUDPAddressOffset = 0x4000;
+  static const int32_t kDefaultTtlValue = kMaxClientNumber;
   struct address_info {
     struct sockaddr_in addr;
     bool enabled;
+    int32_t time_to_live;
   } _udp_client[kMaxClientNumber];
 
   fd_set _fds;
@@ -114,6 +128,12 @@ private:
   int32_t GetAvailableTcpClientIndex();
   int32_t GetAvailableUdpClientIndex();
   int32_t GetNfds();
+  bool IsValidTcpClientIndex(int32_t index);
+  bool IsValidUdpClientIndex(int32_t index);
+  bool IsValidClientIndex(int32_t index) {
+    return IsValidTcpClientIndex(index) || IsValidUdpClientIndex(index);
+  }
+  void RefreshTtl();
 };
 
 #endif // !__KERNEL__

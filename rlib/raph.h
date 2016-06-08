@@ -128,10 +128,10 @@ private:
 #define kassert(flag) if (!(flag)) { _kassert(__FILE__, __LINE__, __func__); }
 void checkpoint(int id, const char *str);
 
-inline void *operator new(size_t, void *p)     throw() { return p; }
+inline void *operator new  (size_t, void *p)   throw() { return p; }
 inline void *operator new[](size_t, void *p)   throw() { return p; }
 inline void  operator delete  (void *, void *) throw() { };
-inline void  operator delete  (void *)         throw() { kassert(false) };
+inline void  operator delete[](void *, void *) throw() { };
 
 static inline uint16_t htons(uint16_t n) {
   return (((n & 0xff) << 8) | ((n & 0xff00) >> 8));

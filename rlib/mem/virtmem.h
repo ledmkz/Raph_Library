@@ -46,13 +46,13 @@ public:
     return addr;
   }
   template <class T, class... Y>
-    T *New(const Y& ...args) {
+  [[deprecated]] T *New(const Y& ...args) {
     virt_addr addr = Alloc(sizeof(T));
     T *t = reinterpret_cast<T *>(addr);
     return new(t) T(args...);
   }
   template <class T>
-    void Delete(T *c) {
+  [[deprecated]] void Delete(T *c) {
     c->~T();
     Free(reinterpret_cast<virt_addr>(c));
   }

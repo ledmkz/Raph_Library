@@ -105,16 +105,18 @@ void PoolingSocket::InitPacketBuffer() {
 }
 
 void PoolingSocket::Poll(void *arg) {
-  int32_t capacity = Capacity();
-  if (capacity > 0) {
-    listen(_tcp_socket, capacity);
+  // TCP listen
+  int32_t tcp_capacity = Capacity();
+  if (tcp_capacity > 0) {
+    if (listen(_tcp_socket, tcp_capacity) >= 0) {
 
-    int32_t index = GetAvailableTcpClientIndex();
+      int32_t index = GetAvailableTcpClientIndex();
 
-    // at this point, _tcp_client[index] is not used
+      // at this point, _tcp_client[index] is not used
 
-    if ((_tcp_client[index] = accept(_tcp_socket, nullptr, nullptr)) > 0) {
-      FD_SET(_tcp_client[index], &_fds);
+      if ((_tcp_client[index] = accept(_tcp_socket, nullptr, nullptr)) > 0) {
+        FD_SET(_tcp_client[index], &_fds);
+      }
     }
   }
 

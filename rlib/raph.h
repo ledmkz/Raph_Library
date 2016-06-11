@@ -127,6 +127,8 @@ private:
 [[noreturn]] void _kassert(const char *file, int line, const char *func);
 #define kassert(flag) if (!(flag)) { _kassert(__FILE__, __LINE__, __func__); }
 void checkpoint(int id, const char *str);
+void checkpoint(const char *func, const int line);
+#define CHECKPOINT checkpoint(__func__, __LINE__)
 
 inline void *operator new  (size_t, void *p)   throw() { return p; }
 inline void *operator new[](size_t, void *p)   throw() { return p; }

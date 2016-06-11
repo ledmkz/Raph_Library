@@ -46,6 +46,7 @@ public:
 
   PoolingSocket(int port) : _port(port) {}
   virtual int32_t Open() override;
+  virtual int32_t Close() override;
   virtual void SetReceiveCallback(int cpuid, const Function &func) override {
     _rx_buffered.SetFunction(cpuid, func);
   }

@@ -32,11 +32,17 @@ int32_t PoolingSocket::Open() {
   if ((_tcp_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("");
     return _tcp_socket;
+  } else {
+    int yes = 1;
+    setsockopt(_tcp_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
   }
 
   if ((_udp_socket = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
     perror("");
     return _udp_socket;
+  } else {
+    int yes = 1;
+    setsockopt(_udp_socket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
   }
   
   // initialize
@@ -69,6 +75,19 @@ int32_t PoolingSocket::Open() {
 
   InitPacketBuffer();
   SetupPollingHandler();
+
+  return 0;
+}
+
+int32_t PoolingSocket::Close() {
+  for (int32_t i = 0; i < kMaxClientNumber; i++) {
+    if (_tcp_client[i] != -1) {
+      close(_tcp_client[i]);
+    }
+  }
+
+  close(_tcp_socket); _tcp_socket = -1;
+  close(_udp_socket); _udp_socket = -1;
 
   return 0;
 }

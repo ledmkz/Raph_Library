@@ -113,7 +113,7 @@ private:
   static const int32_t kMaxClientNumber = 256;
   int _tcp_client[kMaxClientNumber];
   // UDP address information
-  static const int32_t kUDPAddressOffset = 0x4000;
+  static const int32_t kUdpAddressOffset = 0x4000;
   static const int32_t kDefaultTtlValue = kMaxClientNumber;
   struct address_info {
     struct sockaddr_in addr;

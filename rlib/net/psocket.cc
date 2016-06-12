@@ -183,7 +183,7 @@ void PoolingSocket::Poll(void *arg) {
     int32_t index = GetAvailableUdpClientIndex();
 
     if (index != -1 && GetRxPacket(packet)) {
-      socklen_t sin_size;
+      socklen_t sin_size = sizeof(_udp_client[index].addr);
       int32_t rval = recvfrom(_udp_socket, packet->buf, kMaxPacketLength, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[index].addr), &sin_size);
       if (rval > 0) {
         packet->adr = kUdpAddressOffset + index;
@@ -198,6 +198,10 @@ void PoolingSocket::Poll(void *arg) {
         _rx_buffered.Push(packet);
       } else {
         ReuseRxBuffer(packet);
+
+        if(errno != EAGAIN) {
+          perror("udp");
+        }
       }
     }
   }

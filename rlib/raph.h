@@ -54,7 +54,7 @@ extern "C" {
 #else
 #undef kassert
   
-  [[noreturn]] void _kassert(const char *file, int line, const char *func);
+  void _kassert(const char *file, int line, const char *func)  __attribute__((noreturn));
 #define kassert(flag) if (!(flag)) { _kassert(__FILE__, __LINE__, __func__); }
 
 #endif /* __KERNEL__ */

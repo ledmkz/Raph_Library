@@ -69,32 +69,32 @@ extern "C" {
 #define CHECKPOINT _checkpoint(__func__, __LINE__)
 
   static inline void outb(uint16_t pin, uint8_t data) {
-    asm volatile("outb %%al, %%dx;"::"d"(pin),"a"(data));
+    __asm__ volatile("outb %%al, %%dx;"::"d"(pin),"a"(data));
   }
 
   static inline void outw(uint16_t pin, uint16_t data) {
-    asm volatile("outw %%ax, %%dx;"::"d"(pin),"a"(data));
+    __asm__ volatile("outw %%ax, %%dx;"::"d"(pin),"a"(data));
   }
 
   static inline void outl(uint16_t pin, uint32_t data) {
-    asm volatile("outl %%eax, %%dx;"::"d"(pin),"a"(data));
+    __asm__ volatile("outl %%eax, %%dx;"::"d"(pin),"a"(data));
   }
 
   static inline uint8_t inb(uint16_t pin) {
     uint8_t data;
-    asm volatile("inb %%dx, %%al;":"=a"(data):"d"(pin));
+    __asm__ volatile("inb %%dx, %%al;":"=a"(data):"d"(pin));
     return data;
   }
 
   static inline uint16_t inw(uint16_t pin) {
     uint16_t data;
-    asm volatile("inw %%dx, %%ax;":"=a"(data):"d"(pin));
+    __asm__ volatile("inw %%dx, %%ax;":"=a"(data):"d"(pin));
     return data;
   }
 
   static inline uint32_t inl(uint16_t pin) {
     uint32_t data;
-    asm volatile("inl %%dx, %%eax;":"=a"(data):"d"(pin));
+    __asm__ volatile("inl %%dx, %%eax;":"=a"(data):"d"(pin));
     return data;
   }
 

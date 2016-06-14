@@ -87,6 +87,21 @@ public:
     return _rx_buffered.Pop(packet);
   }
 
+protected:
+  static const int32_t kMaxClientNumber = 256;
+  // UDP socket
+  int _udp_socket;
+  // UDP address information
+  static const int32_t kUdpAddressOffset = 0x4000;
+  static const int32_t kDefaultTtlValue = kMaxClientNumber;
+  struct address_info {
+    struct sockaddr_in addr;
+    bool enabled;
+    int32_t time_to_live;
+  } _udp_client[kMaxClientNumber];
+
+  bool IsValidUdpClientIndex(int32_t index);
+
 private:
   static const uint32_t kPoolDepth = 300;
   typedef RingBuffer<Packet *, kPoolDepth> PacketPoolRingBuffer;
@@ -108,20 +123,8 @@ private:
   int _port;
   // TCP socket
   int _tcp_socket;
-  // UDP socket
-  int _udp_socket;
   // TCP socket descriptor of the accepted client
-  static const int32_t kMaxClientNumber = 256;
   int _tcp_client[kMaxClientNumber];
-  // UDP address information
-  static const int32_t kUdpAddressOffset = 0x4000;
-  static const int32_t kDefaultTtlValue = kMaxClientNumber;
-  struct address_info {
-    struct sockaddr_in addr;
-    bool enabled;
-    int32_t time_to_live;
-  } _udp_client[kMaxClientNumber];
-
   fd_set _fds;
   struct timeval _timeout;
 
@@ -130,7 +133,6 @@ private:
   int32_t GetAvailableUdpClientIndex();
   int32_t GetNfds();
   bool IsValidTcpClientIndex(int32_t index);
-  bool IsValidUdpClientIndex(int32_t index);
   bool IsValidClientIndex(int32_t index) {
     return IsValidTcpClientIndex(index) || IsValidUdpClientIndex(index);
   }

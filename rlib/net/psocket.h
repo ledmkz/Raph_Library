@@ -102,6 +102,7 @@ protected:
 
   bool IsValidUdpClientIndex(int32_t index);
   int32_t GetUdpClientIndexFromAddress(struct sockaddr_in *addr);
+  int32_t GetUdpClientIndexFromClientNumber(int32_t index);
 
 private:
   static const uint32_t kPoolDepth = 300;

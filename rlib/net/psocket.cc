@@ -233,7 +233,7 @@ void PoolingSocket::Poll(void *arg) {
 
       if (IsValidUdpClientIndex(packet->adr)) {
         // the address number is valid UDP address
-        int32_t index = packet->adr - kUdpAddressOffset;
+        int32_t index = GetUdpClientIndexFromClientNumber(packet->adr);
         sendto(_udp_socket, packet->buf, packet->len, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[index].addr), sizeof(_udp_client[index].addr));
         ReuseTxBuffer(packet);
       } else if (IsValidTcpClientIndex(packet->adr)) {
@@ -318,7 +318,7 @@ bool PoolingSocket::IsValidTcpClientIndex(int32_t index) {
 }
 
 bool PoolingSocket::IsValidUdpClientIndex(int32_t index) {
-  int32_t uadr = index - kUdpAddressOffset;
+  int32_t uadr = GetUdpClientIndexFromClientNumber(index);
   if (0 <= uadr && uadr < kMaxClientNumber && _udp_client[uadr].enabled) {
     return true;
   } else {
@@ -336,6 +336,10 @@ int32_t PoolingSocket::GetUdpClientIndexFromAddress(struct sockaddr_in *addr) {
   }
 
   return -1;
+}
+
+int32_t PoolingSocket::GetUdpClientIndexFromClientNumber(int32_t index) {
+  return index - kUdpAddressOffset;
 }
 
 void PoolingSocket::RefreshTtl() {

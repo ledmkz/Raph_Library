@@ -180,22 +180,40 @@ void PoolingSocket::Poll(void *arg) {
   {
     // UDP receive sequence
     Packet *packet;
-    int32_t index = GetAvailableUdpClientIndex();
 
-    if (index != -1 && GetRxPacket(packet)) {
-      socklen_t sin_size = sizeof(_udp_client[index].addr);
-      int32_t rval = recvfrom(_udp_socket, packet->buf, kMaxPacketLength, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[index].addr), &sin_size);
+    if (GetRxPacket(packet)) {
+      struct sockaddr_in from;
+      socklen_t sin_size = sizeof(from);
+      int32_t rval = recvfrom(_udp_socket, packet->buf, kMaxPacketLength, 0, reinterpret_cast<struct sockaddr *>(&from), &sin_size);
+
       if (rval > 0) {
-        packet->adr = kUdpAddressOffset + index;
-        packet->len = rval;
+        bool is_registered = true;
+        int32_t index = GetUdpClientIndexFromAddress(&from);
 
-        // register UDP address info
-        _udp_client[index].time_to_live = kDefaultTtlValue;
-        _udp_client[index].enabled = true;
+        if (index == -1) {
+          // assign new UDP client number
+          index = GetAvailableUdpClientIndex();
+          is_registered = false;
+        }
 
-        RefreshTtl();
+        if (index != -1) {
+          if (!is_registered) {
+            // register new UDP address info
+            memcpy(&_udp_client[index].addr, &from, sizeof(from));
+            _udp_client[index].time_to_live = kDefaultTtlValue;
+            _udp_client[index].enabled = true;
+          }
 
-        _rx_buffered.Push(packet);
+          packet->adr = kUdpAddressOffset + index;
+          packet->len = rval;
+  
+          RefreshTtl();
+  
+          _rx_buffered.Push(packet);
+        } else {
+          // no enough UDP clients space
+          ReuseRxBuffer(packet);
+        }
       } else {
         ReuseRxBuffer(packet);
 
@@ -306,6 +324,18 @@ bool PoolingSocket::IsValidUdpClientIndex(int32_t index) {
   } else {
     return false;
   }
+}
+
+int32_t PoolingSocket::GetUdpClientIndexFromAddress(struct sockaddr_in *addr) {
+  for (int32_t i = 0; i < kMaxClientNumber; i++) {
+    if (_udp_client[i].enabled) {
+      if (memcmp(&_udp_client[i].addr, addr, sizeof(*addr)) == 0) {
+        return i;
+      }
+    }
+  }
+
+  return -1;
 }
 
 void PoolingSocket::RefreshTtl() {

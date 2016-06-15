@@ -101,6 +101,7 @@ protected:
   } _udp_client[kMaxClientNumber];
 
   bool IsValidUdpClientIndex(int32_t index);
+  int32_t GetUdpClientIndexFromAddress(struct sockaddr_in *addr);
 
 private:
   static const uint32_t kPoolDepth = 300;

@@ -63,10 +63,22 @@ int32_t PoolingSocket::Open() {
   struct sockaddr_in addr;
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
+  addr.sin_addr.s_addr = _ipaddr;
   addr.sin_port = htons(_port);
-  bind(_tcp_socket, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr));
-  bind(_udp_socket, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr));
+  if (bind(_tcp_socket, reinterpret_cast<struct sockaddr *>(&addr), sizeof(addr))) {
+    perror("bind(tcp)");
+    exit(EXIT_FAILURE);
+  }
+
+  struct sockaddr_in udp_addr;
+  memset(&udp_addr, 0, sizeof(udp_addr));
+  udp_addr.sin_family = AF_INET;
+  udp_addr.sin_addr.s_addr = _ipaddr;
+  udp_addr.sin_port = htons(_port);
+  if (bind(_udp_socket, reinterpret_cast<struct sockaddr *>(&udp_addr), sizeof(udp_addr))) {
+    perror("bind(udp)");
+    exit(EXIT_FAILURE);
+  }
 
   FD_ZERO(&_fds);
 

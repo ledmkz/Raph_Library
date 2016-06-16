@@ -44,7 +44,11 @@ public:
     uint8_t buf[kMaxPacketLength]; // packet content body
   };
 
-  PoolingSocket(int port) : _port(port) {}
+  static const uint16_t kDefaultPort = 7000;
+
+  PoolingSocket() : _ipaddr(INADDR_ANY), _port(kDefaultPort) {}
+  PoolingSocket(int port) : _ipaddr(INADDR_ANY), _port(port) {}
+  PoolingSocket(uint32_t ipaddr, int port) : _ipaddr(ipaddr), _port(port) {}
   virtual int32_t Open() override;
   virtual int32_t Close() override;
   virtual void SetReceiveCallback(int cpuid, const Function &func) override {
@@ -121,6 +125,8 @@ private:
 
   PollingFunc _polling;
 
+  // IP address
+  uint32_t _ipaddr;
   // listening port
   int _port;
   // TCP socket

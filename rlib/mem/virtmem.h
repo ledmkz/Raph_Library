@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <raph.h>
 
 typedef uint64_t virt_addr;
 template <typename ptr> inline virt_addr ptr2virtaddr(ptr *addr) {

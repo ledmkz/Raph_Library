@@ -29,6 +29,7 @@
 class SocketInterface {
 public:
   virtual int32_t Open() = 0;
+  virtual int32_t Close() = 0;
   virtual void SetReceiveCallback(int cpu_id, const Function &func) = 0;
 };
 

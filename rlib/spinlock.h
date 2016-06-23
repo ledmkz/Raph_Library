@@ -93,7 +93,7 @@ protected:
   bool _did_stop_interrupt = false;
 };
 #else
-class IntSpinLock : public SpinLockInterface {
+class IntSpinLock : public SpinLock {
 public:
   IntSpinLock() {}
   virtual ~IntSpinLock() {}

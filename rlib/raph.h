@@ -26,8 +26,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-void kernel_panic(const char *class_name, const char *err_str);
-
+#ifdef __cplusplus
 template<class T>
 static inline T align(T val, int base) {
   return (val / base) * base;
@@ -38,131 +37,69 @@ static inline T alignUp(T val, int base) {
   return align(val + base - 1, base);
 }
 
-static inline void outb(uint16_t pin, uint8_t data) {
-  asm volatile("outb %%al, %%dx;"::"d"(pin),"a"(data));
-}
-
-static inline void outw(uint16_t pin, uint16_t data) {
-  asm volatile("outw %%ax, %%dx;"::"d"(pin),"a"(data));
-}
-
-static inline void outl(uint16_t pin, uint32_t data) {
-  asm volatile("outl %%eax, %%dx;"::"d"(pin),"a"(data));
-}
-
-static inline uint8_t inb(uint16_t pin) {
-  uint8_t data;
-  asm volatile("inb %%dx, %%al;":"=a"(data):"d"(pin));
-  return data;
-}
-
-static inline uint16_t inw(uint16_t pin) {
-  uint16_t data;
-  asm volatile("inw %%dx, %%ax;":"=a"(data):"d"(pin));
-  return data;
-}
-
-static inline uint32_t inl(uint16_t pin) {
-  uint32_t data;
-  asm volatile("inl %%dx, %%eax;":"=a"(data):"d"(pin));
-  return data;
-}
-
-static inline uint32_t inet_atoi(uint8_t ip[]) {
-  return (ip[0] << 24) | (ip[1] << 16) | (ip[2] << 8) | ip[3];
-}
-
-#ifndef __KERNEL__
-#define UTEST_VIRTUAL virtual
-#define kassert(flag) if (!(flag)) {throw #flag;}
-
-#include <arpa/inet.h>
-#include <map>
-template <class K, class V>
-class StdMap {
-public:
-  StdMap() : _flag(0) {}
-  void Set(K key, V value) {
-    while(!__sync_bool_compare_and_swap(&_flag, 0, 1)) {}
-    _map[key] = value;
-    __sync_bool_compare_and_swap(&_flag, 1, 0);
-  }
-  // keyが存在しない場合は、initを返す
-  V Get (K key, V init) {
-    V value = init;
-    while(!__sync_bool_compare_and_swap(&_flag, 0, 1)) {}
-    if (_map.find(key) == _map.end()) {
-      _map.insert(make_pair(key, init));
-      value = init;
-    } else {
-      value = _map.at(key);
-    }
-    __sync_bool_compare_and_swap(&_flag, 1, 0);
-    return value;
-  }
-  bool Exist(K key) {
-    bool flag = false;
-    while(!__sync_bool_compare_and_swap(&_flag, 0, 1)) {}
-    if (_map.find(key) != _map.end()) {
-      flag = true;
-    }
-    __sync_bool_compare_and_swap(&_flag, 1, 0);
-    return flag;
-  }
-  // mapへの直接アクセス
-  // 並列実行しないように
-  std::map<K, V> &Map() {
-    return _map;
-  }
-private:
-  std::map<K, V> _map;
-  volatile int _flag;
-};
-#else
-#define UTEST_VIRTUAL
-#undef kassert
-
-#define MASK(val, ebit, sbit) ((val) & (((1 << ((ebit) - (sbit) + 1)) - 1) << (sbit)))
-
-[[noreturn]] void _kassert(const char *file, int line, const char *func);
-#define kassert(flag) if (!(flag)) { _kassert(__FILE__, __LINE__, __func__); }
-void checkpoint(int id, const char *str);
-
-inline void *operator new(size_t, void *p)     throw() { return p; }
+inline void *operator new  (size_t, void *p)   throw() { return p; }
 inline void *operator new[](size_t, void *p)   throw() { return p; }
 inline void  operator delete  (void *, void *) throw() { };
-inline void  operator delete  (void *)         throw() { kassert(false) };
+inline void  operator delete[](void *, void *) throw() { };
 
-static inline uint16_t htons(uint16_t n) {
-  return (((n & 0xff) << 8) | ((n & 0xff00) >> 8));
-}
+#endif /* __cplusplus */
 
-static inline uint16_t ntohs(uint16_t n) {
-  return (((n & 0xff) << 8) | ((n & 0xff00) >> 8));
-}
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-static inline uint16_t ntohs(uint8_t a[]) {
-  return ((a[0] << 8) | a[1]);
-}
+#ifndef __KERNEL__
+#define kassert(flag) if (!(flag)) {throw #flag;}
 
-static inline uint32_t htonl(uint32_t n) {
-  return (((n & 0xff) << 24)
-         |((n & 0xff00) << 8)
-         |((n & 0xff0000) >> 8)
-         |((n & 0xff000000) >> 24));
-}
-
-static inline uint32_t ntohl(uint32_t n) {
-  return (((n & 0xff) << 24)
-         |((n & 0xff00) << 8)
-         |((n & 0xff0000) >> 8)
-         |((n & 0xff000000) >> 24));
-}
-
-static inline uint32_t ntohl(uint8_t a[]) {
-  return ((a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3]);
-}
+#else
+#undef kassert
+  
+  void _kassert(const char *file, int line, const char *func)  __attribute__((noreturn));
+#define kassert(flag) if (!(flag)) { _kassert(__FILE__, __LINE__, __func__); }
 
 #endif /* __KERNEL__ */
+
+  
+#define MASK(val, ebit, sbit) ((val) & (((1 << ((ebit) - (sbit) + 1)) - 1) << (sbit)))
+  
+  void kernel_panic(const char *class_name, const char *err_str);
+
+  void checkpoint(int id, const char *str);
+  void _checkpoint(const char *func, const int line);
+#define CHECKPOINT _checkpoint(__func__, __LINE__)
+
+  static inline void outb(uint16_t pin, uint8_t data) {
+    __asm__ volatile("outb %%al, %%dx;"::"d"(pin),"a"(data));
+  }
+
+  static inline void outw(uint16_t pin, uint16_t data) {
+    __asm__ volatile("outw %%ax, %%dx;"::"d"(pin),"a"(data));
+  }
+
+  static inline void outl(uint16_t pin, uint32_t data) {
+    __asm__ volatile("outl %%eax, %%dx;"::"d"(pin),"a"(data));
+  }
+
+  static inline uint8_t inb(uint16_t pin) {
+    uint8_t data;
+    __asm__ volatile("inb %%dx, %%al;":"=a"(data):"d"(pin));
+    return data;
+  }
+
+  static inline uint16_t inw(uint16_t pin) {
+    uint16_t data;
+    __asm__ volatile("inw %%dx, %%ax;":"=a"(data):"d"(pin));
+    return data;
+  }
+
+  static inline uint32_t inl(uint16_t pin) {
+    uint32_t data;
+    __asm__ volatile("inl %%dx, %%eax;":"=a"(data):"d"(pin));
+    return data;
+  }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __RAPH_KERNEL_RAPH_H__ */

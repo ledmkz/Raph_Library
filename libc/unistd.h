@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2015 Raphine Project
+ * Copyright (c) 2016 Raphine Project
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,24 +16,23 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Author: Levelfour
+ * Author: Liva
  * 
  */
 
-#ifndef __RAPH_LIB_STDLIB_H__
-#define __RAPH_LIB_STDLIB_H__
+#ifndef __RAPH_LIB_UNISTD_H__
+#define __RAPH_LIB_UNISTD_H__
 
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-  
-  uint32_t rand();
-  void abort();
+
+  void *sbrk(intptr_t increment);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif // __RAPH_LIB_STDLIB_H__
+#endif // __RAPH_LIB_UNISTD_H__

@@ -37,10 +37,18 @@ static inline T alignUp(T val, int base) {
   return align(val + base - 1, base);
 }
 
+#ifdef __KERNEL__
+
+#define __NO_LIBC__
+
+#endif // __KERNEL__
+
+#ifdef __NO_LIBC__
 inline void *operator new  (size_t, void *p)   throw() { return p; }
 inline void *operator new[](size_t, void *p)   throw() { return p; }
 inline void  operator delete  (void *, void *) throw() { };
 inline void  operator delete[](void *, void *) throw() { };
+#endif // __NO_LIBC__
 
 #endif /* __cplusplus */
 

@@ -353,4 +353,35 @@ class Tty {
   IntSpinLock _lock;
 };
 
+#ifndef __KERNEL__
+
+class StdOut : public Tty {
+ public:
+  Vga() {
+  }
+ private:
+  virtual void Write(uint8_t c) override {
+    uint8_t tmp[1] = {c};
+    write(1, reinterpret_cast<void *>(tmp), 1);
+  }
+  void Scroll() {
+  }
+};
+
+class StdErr : public Tty {
+ public:
+  Vga() {
+  }
+ private:
+  virtual void Write(uint8_t c) override {
+    uint8_t tmp[1] = {c};
+    write(2, reinterpret_cast<void *>(tmp), 1);
+  }
+  void Scroll() {
+  }
+};
+
+#endif // __KERNEL__
+
+
 #endif // __RAPH_KERNEL_TTY_H__

@@ -23,5 +23,7 @@
 #include <errno.h>
 
 extern "C" {
+#ifdef __KERNEL__
   int errno = 0;
+#endif // __KERNEL__
 }

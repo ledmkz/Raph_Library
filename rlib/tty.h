@@ -355,9 +355,12 @@ class Tty {
 
 #ifndef __KERNEL__
 
+// TODO fix
+int write(int fd, const void * buf, size_t count);
+
 class StdOut : public Tty {
  public:
-  Vga() {
+  StdOut() {
   }
  private:
   virtual void Write(uint8_t c) override {
@@ -370,7 +373,7 @@ class StdOut : public Tty {
 
 class StdErr : public Tty {
  public:
-  Vga() {
+  StdErr() {
   }
  private:
   virtual void Write(uint8_t c) override {

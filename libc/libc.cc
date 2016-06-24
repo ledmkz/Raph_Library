@@ -16,27 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Author: Levelfour
+ * Author: Liva
  * 
  */
 
-#ifndef __RAPH_LIB_MEM_UVIRTMEM_H__
-#define __RAPH_LIB_MEM_UVIRTMEM_H__
+#include <errno.h>
 
-#ifndef __KERNEL__
-
-#include <stdlib.h>
-#include <stdint.h>
-#include <mem/virtmem.h>
-
-class UVirtmemCtrl : public VirtmemCtrl {
-public:
-  virtual virt_addr Alloc(size_t size) override;
-  virtual void Free(virt_addr addr) override;
-  virtual virt_addr Sbrk(int64_t increment) override {
-    abort();
-  }
-};
-
-#endif // !__KERNEL__
-#endif // __RAPH_LIB_MEM_UVIRTMEM_H__
+extern "C" {
+#ifdef __KERNEL__
+  int errno = 0;
+#endif // __KERNEL__
+}

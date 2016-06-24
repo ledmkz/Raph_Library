@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2016 Raphine Project
+ * Copyright (c) 2016 Project Raphine
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,27 +16,35 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Author: Levelfour
+ * Author: Liva
  * 
  */
 
-#ifndef __RAPH_LIB_MEM_UVIRTMEM_H__
-#define __RAPH_LIB_MEM_UVIRTMEM_H__
-
-#ifndef __KERNEL__
-
-#include <stdlib.h>
-#include <stdint.h>
+#include <tty.h>
 #include <mem/virtmem.h>
 
-class UVirtmemCtrl : public VirtmemCtrl {
-public:
-  virtual virt_addr Alloc(size_t size) override;
-  virtual void Free(virt_addr addr) override;
-  virtual virt_addr Sbrk(int64_t increment) override {
-    abort();
+void Tty::PrintString(String *str) {
+  for(int i = 0; i < String::length; i++) {
+    if (str->str[i] == '\0') {
+      return;
+    }
+    Write(str->str[i]);
   }
-};
+  if (str->next != nullptr) {
+    PrintString(str->next);
+  }
+}
 
-#endif // !__KERNEL__
-#endif // __RAPH_LIB_MEM_UVIRTMEM_H__
+Tty::String *Tty::String::New() {
+  String *str = reinterpret_cast<String *>(virtmem_ctrl->Alloc(sizeof(String)));
+  new(str) String;
+  str->Init();
+  return str;
+}
+
+void Tty::String::Delete() {
+  if (next != nullptr) {
+    next->Delete();
+  }
+  virtmem_ctrl->Free(reinterpret_cast<virt_addr>(this));
+}

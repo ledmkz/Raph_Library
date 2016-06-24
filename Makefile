@@ -1,8 +1,8 @@
-OBJS = rlib.o
+OBJS = rlib.o libc.o
 
 DEPS= $(filter %.d, $(subst .o,.d, $(OBJS)))
 
-.PHONY: clean rlib.o
+.PHONY: clean rlib.o libc.o
 
 default: lib.o
 
@@ -13,6 +13,9 @@ lib.o: $(OBJS)
 
 rlib.o:
 	make -C rlib CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" ASFLAGS="$(ASFLAGS)"
+
+libc.o:
+	make -C libc CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" ASFLAGS="$(ASFLAGS)"
 
 clean:
 	make -C rlib clean

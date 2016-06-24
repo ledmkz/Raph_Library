@@ -53,7 +53,7 @@ void TaskCtrl::Setup() {
     _task_struct[i].top_sub = t;
     _task_struct[i].bottom_sub = t;
 
-    _task_struct[i].state = TaskQueueState::kNotRunning;
+    _task_struct[i].state = TaskQueueState::kNotStarted;
 
     Callout *dt = virtmem_ctrl->New<Callout>();
     dt->_next = nullptr;
@@ -63,6 +63,7 @@ void TaskCtrl::Setup() {
 
 void TaskCtrl::Run() {
   int cpuid = cpu_ctrl->GetId();
+  _task_struct[cpuid].state = TaskQueueState::kNotRunning;
 #ifdef __KERNEL__
   apic_ctrl->SetupTimer(kTaskExecutionInterval);
 #endif // __KERNEL__

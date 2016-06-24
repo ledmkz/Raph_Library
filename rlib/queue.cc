@@ -16,27 +16,40 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
- * Author: Levelfour
+ * Author: Liva
  * 
  */
 
-#ifndef __RAPH_LIB_MEM_UVIRTMEM_H__
-#define __RAPH_LIB_MEM_UVIRTMEM_H__
-
-#ifndef __KERNEL__
-
-#include <stdlib.h>
-#include <stdint.h>
+#include <queue.h>
+#include <global.h>
 #include <mem/virtmem.h>
+#include <raph.h>
 
-class UVirtmemCtrl : public VirtmemCtrl {
-public:
-  virtual virt_addr Alloc(size_t size) override;
-  virtual void Free(virt_addr addr) override;
-  virtual virt_addr Sbrk(int64_t increment) override {
-    abort();
+void Queue::Push(void *data) {
+  Container *c = reinterpret_cast<Container *>(virtmem_ctrl->Alloc(sizeof(Container)));
+  c->data = data;
+  c->next = nullptr;
+  Locker locker(_lock);
+  kassert(_last->next == nullptr);
+  _last->next = c;
+  _last = c;
+}
+
+bool Queue::Pop(void *&data) {
+  Container *c;
+  {
+    Locker locker(_lock);
+    if (IsEmpty()) {
+      return false;
+    }
+    c = _first.next;
+    kassert(c != nullptr);
+    _first.next = c->next;
+    if (_last == c) {
+      _last = &_first;
+    }
   }
-};
-
-#endif // !__KERNEL__
-#endif // __RAPH_LIB_MEM_UVIRTMEM_H__
+  data = c->data;
+  virtmem_ctrl->Free(reinterpret_cast<virt_addr>(c));
+  return true;
+}

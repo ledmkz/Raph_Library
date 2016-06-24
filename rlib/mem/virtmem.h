@@ -25,6 +25,12 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <raph.h>
+
+#ifndef __KERNEL__
+// should be removed
+#include <new>
+#endif // __KERNEL__
 
 typedef uint64_t virt_addr;
 template <typename ptr> inline virt_addr ptr2virtaddr(ptr *addr) {
@@ -46,16 +52,17 @@ public:
     return addr;
   }
   template <class T, class... Y>
-    T *New(const Y& ...args) {
+  [[deprecated]] T *New(const Y& ...args) {
     virt_addr addr = Alloc(sizeof(T));
     T *t = reinterpret_cast<T *>(addr);
     return new(t) T(args...);
   }
   template <class T>
-    void Delete(T *c) {
+  [[deprecated]] void Delete(T *c) {
     c->~T();
     Free(reinterpret_cast<virt_addr>(c));
   }
+  virtual virt_addr Sbrk(int64_t increment) = 0;
 private:
 };
 

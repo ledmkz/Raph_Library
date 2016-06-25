@@ -342,7 +342,7 @@ class Tty {
   void PrintString(String *str);
   void DoString(String *str) {
     // TODO cpuid
-    if (task_ctrl->GetState(1) == TaskCtrl::TaskQueueState::kNotStarted) {
+    if (task_ctrl->GetState(1) != TaskCtrl::TaskQueueState::kNotStarted) {
       _queue.Push(str);
     } else {
       Locker locker(_lock);
@@ -355,8 +355,8 @@ class Tty {
 
 #ifndef __KERNEL__
 
-// TODO fix
-int write(int fd, const void * buf, size_t count);
+#include <unistd.h>
+#include <stdio.h>
 
 class StdOut : public Tty {
  public:

@@ -39,15 +39,22 @@ class PoolingSocket : public SocketInterface {
 public:
   static const uint32_t kMaxPacketLength = 1460;
   struct Packet {
-    int32_t len;
-    uint8_t buf[kMaxPacketLength];
+    int32_t adr; // recipient number
+    int32_t len; // packet lenght
+    uint8_t buf[kMaxPacketLength]; // packet content body
   };
 
-  PoolingSocket(int port) : _port(port), _client(-1) {}
+  PoolingSocket(int port) : _port(port) {}
   virtual int32_t Open() override;
+  virtual int32_t Close() override;
   virtual void SetReceiveCallback(int cpuid, const Function &func) override {
     _rx_buffered.SetFunction(cpuid, func);
   }
+
+  // pass 32bit-converted IP address to 1st-arg (use inet_addr)
+  // return value is client number, but
+  // if there is no sufficient capacity, this function returns -1
+  int32_t RegisterUdpAddress(uint32_t ipaddr, uint16_t port);
 
   void ReuseRxBuffer(Packet *packet) {
     kassert(_rx_reserved.Push(packet));
@@ -67,7 +74,14 @@ public:
     return _rx_reserved.Pop(packet);
   }
   bool TransmitPacket(Packet *packet) {
-    return _tx_buffered.Push(packet);
+    if(IsValidClientIndex(packet->adr)) {
+      return _tx_buffered.Push(packet);
+    } else {
+      // Invalid client number. Maybe
+      //   - your specified client number is non-sense
+      //   - UDP address info has been cleared (please re-register)
+      return false;
+    }
   }
   bool ReceivePacket(Packet *&packet) {
     return _rx_buffered.Pop(packet);
@@ -93,12 +107,34 @@ private:
   // listening port
   int _port;
   // TCP socket
-  int _socket;
-  // socket descriptor of the accepted client
-  int _client;
+  int _tcp_socket;
+  // UDP socket
+  int _udp_socket;
+  // TCP socket descriptor of the accepted client
+  static const int32_t kMaxClientNumber = 256;
+  int _tcp_client[kMaxClientNumber];
+  // UDP address information
+  static const int32_t kUdpAddressOffset = 0x4000;
+  static const int32_t kDefaultTtlValue = kMaxClientNumber;
+  struct address_info {
+    struct sockaddr_in addr;
+    bool enabled;
+    int32_t time_to_live;
+  } _udp_client[kMaxClientNumber];
 
   fd_set _fds;
   struct timeval _timeout;
+
+  int32_t Capacity();
+  int32_t GetAvailableTcpClientIndex();
+  int32_t GetAvailableUdpClientIndex();
+  int32_t GetNfds();
+  bool IsValidTcpClientIndex(int32_t index);
+  bool IsValidUdpClientIndex(int32_t index);
+  bool IsValidClientIndex(int32_t index) {
+    return IsValidTcpClientIndex(index) || IsValidUdpClientIndex(index);
+  }
+  void RefreshTtl();
 };
 
 #endif // !__KERNEL__

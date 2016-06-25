@@ -26,3 +26,4 @@ CpuCtrlInterface *cpu_ctrl;
 TaskCtrl *task_ctrl;
 Timer *timer;
 Tty *gtty;
+Tty *gerr;

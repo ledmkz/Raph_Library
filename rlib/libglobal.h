@@ -31,6 +31,7 @@ class Timer;
 extern CpuCtrlInterface *cpu_ctrl;
 extern TaskCtrl *task_ctrl;
 extern Tty *gtty;
+extern Tty *gerr;
 extern Timer *timer;
 
 #endif /* __RAPH_LIB_LIBGLOBAL_H__ */

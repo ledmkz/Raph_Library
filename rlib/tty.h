@@ -342,7 +342,7 @@ class Tty {
   void PrintString(String *str);
   void DoString(String *str) {
     // TODO cpuid
-    if (task_ctrl->GetState(1) == TaskCtrl::TaskQueueState::kNotStarted) {
+    if (task_ctrl->GetState(1) != TaskCtrl::TaskQueueState::kNotStarted) {
       _queue.Push(str);
     } else {
       Locker locker(_lock);
@@ -355,9 +355,12 @@ class Tty {
 
 #ifndef __KERNEL__
 
+#include <unistd.h>
+#include <stdio.h>
+
 class StdOut : public Tty {
  public:
-  Vga() {
+  StdOut() {
   }
  private:
   virtual void Write(uint8_t c) override {
@@ -370,7 +373,7 @@ class StdOut : public Tty {
 
 class StdErr : public Tty {
  public:
-  Vga() {
+  StdErr() {
   }
  private:
   virtual void Write(uint8_t c) override {

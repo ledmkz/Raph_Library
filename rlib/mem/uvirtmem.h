@@ -25,6 +25,7 @@
 
 #ifndef __KERNEL__
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <mem/virtmem.h>
 

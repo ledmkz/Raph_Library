@@ -32,6 +32,7 @@ TaskCtrl *task_ctrl;
 Timer *timer;
 Tty *gtty;
 Tty *gerr;
+VirtmemCtrl *virtmem_ctrl;
 
 #ifndef __KERNEL__
 void AllocateLibGlobalObjects() {

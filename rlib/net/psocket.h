@@ -78,7 +78,7 @@ public:
     return _rx_reserved.Pop(packet);
   }
   bool TransmitPacket(Packet *packet) {
-    if(IsValidClientIndex(packet->adr)) {
+    if(IsValidClientNumber(packet->adr)) {
       return _tx_buffered.Push(packet);
     } else {
       // Invalid client number. Maybe
@@ -90,6 +90,8 @@ public:
   bool ReceivePacket(Packet *&packet) {
     return _rx_buffered.Pop(packet);
   }
+  bool IsTcpPacket(Packet *packet);
+  bool IsUdpPacket(Packet *packet);
 
 protected:
   static const int32_t kMaxClientNumber = 256;
@@ -104,9 +106,9 @@ protected:
     int32_t time_to_live;
   } _udp_client[kMaxClientNumber];
 
-  bool IsValidUdpClientIndex(int32_t index);
+  bool IsValidUdpClientNumber(int32_t cli);
   int32_t GetUdpClientIndexFromAddress(struct sockaddr_in *addr);
-  int32_t GetUdpClientIndexFromClientNumber(int32_t index);
+  int32_t GetUdpClientIndexFromClientNumber(int32_t cli);
 
 private:
   static const uint32_t kPoolDepth = 300;
@@ -140,10 +142,11 @@ private:
   int32_t GetAvailableTcpClientIndex();
   int32_t GetAvailableUdpClientIndex();
   int32_t GetNfds();
-  bool IsValidTcpClientIndex(int32_t index);
-  bool IsValidClientIndex(int32_t index) {
-    return IsValidTcpClientIndex(index) || IsValidUdpClientIndex(index);
+  bool IsValidTcpClientNumber(int32_t cli);
+  bool IsValidClientNumber(int32_t cli) {
+    return IsValidTcpClientNumber(cli) || IsValidUdpClientNumber(cli);
   }
+  int32_t GetTcpClientIndexFromClientNumber(int32_t cli);
   void RefreshTtl();
 };
 

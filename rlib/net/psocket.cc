@@ -243,12 +243,12 @@ void PoolingSocket::Poll(void *arg) {
     // transmit packet (if non-sent packet remains in buffer)
     if (_tx_buffered.Pop(packet)) {
 
-      if (IsValidUdpClientIndex(packet->adr)) {
+      if (IsValidUdpClientNumber(packet->adr)) {
         // the address number is valid UDP address
         int32_t index = GetUdpClientIndexFromClientNumber(packet->adr);
         sendto(_udp_socket, packet->buf, packet->len, 0, reinterpret_cast<struct sockaddr *>(&_udp_client[index].addr), sizeof(_udp_client[index].addr));
         ReuseTxBuffer(packet);
-      } else if (IsValidTcpClientIndex(packet->adr)) {
+      } else if (IsValidTcpClientNumber(packet->adr)) {
         // the address number is valid TCP address
         int32_t rval, residue = packet->len;
         uint8_t *ptr = packet->buf;
@@ -321,7 +321,8 @@ int32_t PoolingSocket::GetNfds() {
   return max_fd + 1;
 }
 
-bool PoolingSocket::IsValidTcpClientIndex(int32_t index) {
+bool PoolingSocket::IsValidTcpClientNumber(int32_t cli) {
+  int32_t index = GetTcpClientIndexFromClientNumber(cli);
   if (0 <= index && index < kMaxClientNumber && _tcp_client[index] != -1) {
     return true;
   } else {
@@ -329,8 +330,12 @@ bool PoolingSocket::IsValidTcpClientIndex(int32_t index) {
   }
 }
 
-bool PoolingSocket::IsValidUdpClientIndex(int32_t index) {
-  int32_t uadr = GetUdpClientIndexFromClientNumber(index);
+int32_t PoolingSocket::GetTcpClientIndexFromClientNumber(int32_t cli) {
+  return cli;
+}
+
+bool PoolingSocket::IsValidUdpClientNumber(int32_t cli) {
+  int32_t uadr = GetUdpClientIndexFromClientNumber(cli);
   if (0 <= uadr && uadr < kMaxClientNumber && _udp_client[uadr].enabled) {
     return true;
   } else {
@@ -350,8 +355,8 @@ int32_t PoolingSocket::GetUdpClientIndexFromAddress(struct sockaddr_in *addr) {
   return -1;
 }
 
-int32_t PoolingSocket::GetUdpClientIndexFromClientNumber(int32_t index) {
-  return index - kUdpAddressOffset;
+int32_t PoolingSocket::GetUdpClientIndexFromClientNumber(int32_t cli) {
+  return cli - kUdpAddressOffset;
 }
 
 void PoolingSocket::RefreshTtl() {
@@ -363,6 +368,14 @@ void PoolingSocket::RefreshTtl() {
       }
     }
   }
+}
+
+bool PoolingSocket::IsTcpPacket(Packet *packet) {
+  return IsValidTcpClientNumber(packet->adr);
+}
+
+bool PoolingSocket::IsUdpPacket(Packet *packet) {
+  return IsValidUdpClientNumber(packet->adr);
 }
 
 #endif // !__KERNEL__

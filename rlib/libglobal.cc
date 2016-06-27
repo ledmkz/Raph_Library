@@ -23,6 +23,7 @@
 #include <libglobal.h>
 #include <thread.h>
 #include <task.h>
+#include <tty.h>
 #include <mem/uvirtmem.h>
 #include <dev/posixtimer.h>
 

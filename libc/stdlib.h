@@ -28,8 +28,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-uint32_t rand();
+  
+  uint32_t rand();
+  void abort();
 
 #ifdef __cplusplus
 }

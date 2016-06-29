@@ -20,23 +20,10 @@
  * 
  */
 
-#ifndef __RAPH_LIB_LIBGLOBAL_H__
-#define __RAPH_LIB_LIBGLOBAL_H__
+#include <errno.h>
 
-class CpuCtrlInterface;
-class TaskCtrl;
-class Tty;
-class Timer;
-class VirtmemCtrl;
-
-extern CpuCtrlInterface *cpu_ctrl;
-extern TaskCtrl *task_ctrl;
-extern Tty *gtty;
-extern Tty *gerr;
-extern Timer *timer;
-extern VirtmemCtrl *virtmem_ctrl;
-
-void AllocateLibGlobalObjects();
-void InitializeLibGlobalObjects();
-
-#endif /* __RAPH_LIB_LIBGLOBAL_H__ */
+extern "C" {
+#ifdef __KERNEL__
+  int errno = 0;
+#endif // __KERNEL__
+}

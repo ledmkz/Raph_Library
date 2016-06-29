@@ -21,8 +21,34 @@
  */
 
 #include <libglobal.h>
+#include <thread.h>
+#include <task.h>
+#include <tty.h>
+#include <mem/uvirtmem.h>
+#include <dev/posixtimer.h>
 
 CpuCtrlInterface *cpu_ctrl;
 TaskCtrl *task_ctrl;
 Timer *timer;
 Tty *gtty;
+Tty *gerr;
+VirtmemCtrl *virtmem_ctrl;
+
+#ifndef __KERNEL__
+void AllocateLibGlobalObjects() {
+  virtmem_ctrl = new UVirtmemCtrl;
+  timer = new PosixTimer;
+  cpu_ctrl = new PthreadCtrl(8);
+  task_ctrl = new TaskCtrl;
+  gtty = new StdOut;
+  gerr = new StdErr;
+}
+
+void InitializeLibGlobalObjects() {
+  task_ctrl->Setup();
+  gtty->Init();
+  gerr->Init();
+}
+
+#endif // __KERNEL__
+

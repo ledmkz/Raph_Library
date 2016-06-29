@@ -20,23 +20,19 @@
  * 
  */
 
-#ifndef __RAPH_LIB_LIBGLOBAL_H__
-#define __RAPH_LIB_LIBGLOBAL_H__
+#ifndef __RAPH_LIB_UNISTD_H__
+#define __RAPH_LIB_UNISTD_H__
 
-class CpuCtrlInterface;
-class TaskCtrl;
-class Tty;
-class Timer;
-class VirtmemCtrl;
+#include <stdint.h>
 
-extern CpuCtrlInterface *cpu_ctrl;
-extern TaskCtrl *task_ctrl;
-extern Tty *gtty;
-extern Tty *gerr;
-extern Timer *timer;
-extern VirtmemCtrl *virtmem_ctrl;
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-void AllocateLibGlobalObjects();
-void InitializeLibGlobalObjects();
+  void *sbrk(intptr_t increment);
 
-#endif /* __RAPH_LIB_LIBGLOBAL_H__ */
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif // __RAPH_LIB_UNISTD_H__

@@ -34,6 +34,7 @@ class Callout;
 class TaskCtrl {
 public:
   enum class TaskQueueState {
+    kNotStarted,
     kNotRunning,
     kRunning,
     kSleeped,
@@ -45,7 +46,7 @@ public:
   void Run();
   TaskQueueState GetState(int cpuid) {
     if (_task_struct == nullptr) {
-      return TaskQueueState::kNotRunning;
+      return TaskQueueState::kNotStarted;
     }
     return _task_struct[cpuid].state;
   }

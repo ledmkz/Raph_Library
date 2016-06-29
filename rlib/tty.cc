@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2016 Raphine Project
+ * Copyright (c) 2016 Project Raphine
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,23 +20,31 @@
  * 
  */
 
-#ifndef __RAPH_LIB_LIBGLOBAL_H__
-#define __RAPH_LIB_LIBGLOBAL_H__
+#include <tty.h>
+#include <mem/virtmem.h>
 
-class CpuCtrlInterface;
-class TaskCtrl;
-class Tty;
-class Timer;
-class VirtmemCtrl;
+void Tty::PrintString(String *str) {
+  for(int i = 0; i < String::length; i++) {
+    if (str->str[i] == '\0') {
+      return;
+    }
+    Write(str->str[i]);
+  }
+  if (str->next != nullptr) {
+    PrintString(str->next);
+  }
+}
 
-extern CpuCtrlInterface *cpu_ctrl;
-extern TaskCtrl *task_ctrl;
-extern Tty *gtty;
-extern Tty *gerr;
-extern Timer *timer;
-extern VirtmemCtrl *virtmem_ctrl;
+Tty::String *Tty::String::New() {
+  String *str = reinterpret_cast<String *>(virtmem_ctrl->Alloc(sizeof(String)));
+  new(str) String;
+  str->Init();
+  return str;
+}
 
-void AllocateLibGlobalObjects();
-void InitializeLibGlobalObjects();
-
-#endif /* __RAPH_LIB_LIBGLOBAL_H__ */
+void Tty::String::Delete() {
+  if (next != nullptr) {
+    next->Delete();
+  }
+  virtmem_ctrl->Free(reinterpret_cast<virt_addr>(this));
+}

@@ -20,23 +20,36 @@
  * 
  */
 
-#ifndef __RAPH_LIB_LIBGLOBAL_H__
-#define __RAPH_LIB_LIBGLOBAL_H__
+#include <queue.h>
+#include <global.h>
+#include <mem/virtmem.h>
+#include <raph.h>
 
-class CpuCtrlInterface;
-class TaskCtrl;
-class Tty;
-class Timer;
-class VirtmemCtrl;
+void Queue::Push(void *data) {
+  Container *c = reinterpret_cast<Container *>(virtmem_ctrl->Alloc(sizeof(Container)));
+  c->data = data;
+  c->next = nullptr;
+  Locker locker(_lock);
+  kassert(_last->next == nullptr);
+  _last->next = c;
+  _last = c;
+}
 
-extern CpuCtrlInterface *cpu_ctrl;
-extern TaskCtrl *task_ctrl;
-extern Tty *gtty;
-extern Tty *gerr;
-extern Timer *timer;
-extern VirtmemCtrl *virtmem_ctrl;
-
-void AllocateLibGlobalObjects();
-void InitializeLibGlobalObjects();
-
-#endif /* __RAPH_LIB_LIBGLOBAL_H__ */
+bool Queue::Pop(void *&data) {
+  Container *c;
+  {
+    Locker locker(_lock);
+    if (IsEmpty()) {
+      return false;
+    }
+    c = _first.next;
+    kassert(c != nullptr);
+    _first.next = c->next;
+    if (_last == c) {
+      _last = &_first;
+    }
+  }
+  data = c->data;
+  virtmem_ctrl->Free(reinterpret_cast<virt_addr>(c));
+  return true;
+}

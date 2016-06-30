@@ -33,20 +33,16 @@
 
 class PthreadCtrl : public CpuCtrlInterface {
 public:
-  PthreadCtrl() : _thread_pool(0) {
-    Setup();
-  }
-  PthreadCtrl(int num_threads) : _cpu_nums(num_threads), _thread_pool(num_threads-1) {
-    Setup();
-  }
+  PthreadCtrl() : _thread_pool(0) {}
+  PthreadCtrl(int num_threads) : _cpu_nums(num_threads), _thread_pool(num_threads-1) {}
   ~PthreadCtrl();
+  void Setup();
   virtual volatile int GetId() override;
   virtual int GetHowManyCpus() override {
     return _cpu_nums;
   }
 
 private:
-  void Setup();
   static const uint8_t kMaxThreadsNumber = 128;
 
   int _cpu_nums = 1;

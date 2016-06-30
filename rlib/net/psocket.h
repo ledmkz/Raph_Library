@@ -44,11 +44,7 @@ public:
     uint8_t buf[kMaxPacketLength]; // packet content body
   };
 
-  static const uint16_t kDefaultPort = 7000;
-
-  PoolingSocket() : _ipaddr(INADDR_ANY), _port(kDefaultPort) {}
-  PoolingSocket(int port) : _ipaddr(INADDR_ANY), _port(port) {}
-  PoolingSocket(uint32_t ipaddr, int port) : _ipaddr(ipaddr), _port(port) {}
+  PoolingSocket(int port) : _port(port) {}
   virtual int32_t Open() override;
   virtual int32_t Close() override;
   virtual void SetReceiveCallback(int cpuid, const Function &func) override {
@@ -78,7 +74,7 @@ public:
     return _rx_reserved.Pop(packet);
   }
   bool TransmitPacket(Packet *packet) {
-    if(IsValidClientNumber(packet->adr)) {
+    if(IsValidClientIndex(packet->adr)) {
       return _tx_buffered.Push(packet);
     } else {
       // Invalid client number. Maybe
@@ -90,25 +86,6 @@ public:
   bool ReceivePacket(Packet *&packet) {
     return _rx_buffered.Pop(packet);
   }
-  bool IsTcpPacket(Packet *packet);
-  bool IsUdpPacket(Packet *packet);
-
-protected:
-  static const int32_t kMaxClientNumber = 256;
-  // UDP socket
-  int _udp_socket;
-  // UDP address information
-  static const int32_t kUdpAddressOffset = 0x4000;
-  static const int32_t kDefaultTtlValue = kMaxClientNumber;
-  struct address_info {
-    struct sockaddr_in addr;
-    bool enabled;
-    int32_t time_to_live;
-  } _udp_client[kMaxClientNumber];
-
-  bool IsValidUdpClientNumber(int32_t cli);
-  int32_t GetUdpClientIndexFromAddress(struct sockaddr_in *addr);
-  int32_t GetUdpClientIndexFromClientNumber(int32_t cli);
 
 private:
   static const uint32_t kPoolDepth = 300;
@@ -127,14 +104,24 @@ private:
 
   PollingFunc _polling;
 
-  // IP address
-  uint32_t _ipaddr;
   // listening port
   int _port;
   // TCP socket
   int _tcp_socket;
+  // UDP socket
+  int _udp_socket;
   // TCP socket descriptor of the accepted client
+  static const int32_t kMaxClientNumber = 256;
   int _tcp_client[kMaxClientNumber];
+  // UDP address information
+  static const int32_t kUdpAddressOffset = 0x4000;
+  static const int32_t kDefaultTtlValue = kMaxClientNumber;
+  struct address_info {
+    struct sockaddr_in addr;
+    bool enabled;
+    int32_t time_to_live;
+  } _udp_client[kMaxClientNumber];
+
   fd_set _fds;
   struct timeval _timeout;
 
@@ -142,11 +129,11 @@ private:
   int32_t GetAvailableTcpClientIndex();
   int32_t GetAvailableUdpClientIndex();
   int32_t GetNfds();
-  bool IsValidTcpClientNumber(int32_t cli);
-  bool IsValidClientNumber(int32_t cli) {
-    return IsValidTcpClientNumber(cli) || IsValidUdpClientNumber(cli);
+  bool IsValidTcpClientIndex(int32_t index);
+  bool IsValidUdpClientIndex(int32_t index);
+  bool IsValidClientIndex(int32_t index) {
+    return IsValidTcpClientIndex(index) || IsValidUdpClientIndex(index);
   }
-  int32_t GetTcpClientIndexFromClientNumber(int32_t cli);
   void RefreshTtl();
 };
 

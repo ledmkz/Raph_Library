@@ -31,68 +31,6 @@
 #include <task.h>
 #include <functional.h>
 
-class ListBuffer {
-public:
-  static ListBuffer *Create(size_t size) {
-    ListBuffer *buf = reinterpret_cast<ListBuffer *>(virtmem_ctrl->Alloc(sizeof(ListBuffer)));
-    buf->_addr = buf->Alloc(size);
-    buf->_size = size;
-    buf->_next = nullptr;
-    buf->_before = nullptr;
-    buf->_head = 0;
-    buf->_len = size;
-    return buf;
-  }
-  static void Destroy(ListBuffer *buf) {
-    if (buf->_before == nullptr) {
-      while (buf->_next != nullptr) {
-        ListBuffer::Remove(buf->_next);
-      }
-      ListBuffer::Remove(buf);
-    } else {
-      ListBuffer::Destroy(buf->_before);
-    }
-  }
-  static void Remove(ListBuffer *buf) {
-    if (buf->_before != nullptr) {
-      buf->_before->_next = buf->_next;
-    }
-    if (buf->_next != nullptr) {
-      buf->_next->_before = buf->_before;
-    }
-    buf->Release();
-    virtmem_ctrl->Free(reinterpret_cast<virt_addr>(buf));
-  }
-  void *GetAddr() {
-    return _addr;
-  }
-  void CutHead(size_t len) {
-    if (len > _len) {
-      if (_next != nullptr) {
-        _next->CutHead(len - _len);
-      }
-      len = _len;
-    }
-    _head += len;
-  }
-protected:
-  virtual void *Alloc(size_t size) {
-    return reinterpret_cast<void *>(virtmem_ctrl->Alloc(size));
-  }
-  virtual void Release() {
-    virtmem_ctrl->Free(reinterpret_cast<virt_addr>(_addr));
-  }
-private:
-  ListBuffer();
-  ~ListBuffer();
-  ListBuffer *_next;
-  ListBuffer *_before;
-  void *_addr;
-  size_t _size;  // バッファ長（管理用）
-  size_t _head;  // 有効領域先頭
-  size_t _len;  // 有効領域長
-};
-
 template<class T, int S>
 class RingBuffer {
  public:

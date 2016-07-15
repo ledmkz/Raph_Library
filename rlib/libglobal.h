@@ -27,11 +27,13 @@ class CpuCtrlInterface;
 class TaskCtrl;
 class Tty;
 class Timer;
+class VirtmemCtrl;
 
 extern CpuCtrlInterface *cpu_ctrl;
 extern TaskCtrl *task_ctrl;
 extern Tty *gtty;
 extern Tty *gerr;
 extern Timer *timer;
+extern VirtmemCtrl *virtmem_ctrl;
 
 #endif /* __RAPH_LIB_LIBGLOBAL_H__ */

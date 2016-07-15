@@ -21,9 +21,28 @@
  */
 
 #include <errno.h>
+#include <stdlib.h>
 
 extern "C" {
 #ifdef __KERNEL__
   int errno = 0;
 #endif // __KERNEL__
 }
+
+#ifdef __KERNEL__
+#include <mem/virtmem.h>
+#include <libglobal.h>
+
+void *malloc (size_t size) {
+  return reinterpret_cast<void *>(virtmem_ctrl->Alloc(size));
+}
+
+void *calloc (size_t n, size_t size) {
+  return reinterpret_cast<void *>(virtmem_ctrl->AllocZ(n * size));
+}
+
+void free (void *ptr) {
+  virtmem_ctrl->Free(reinterpret_cast<virt_addr>(ptr));
+}
+
+#endif // __KERNEL__

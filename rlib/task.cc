@@ -127,7 +127,6 @@ void TaskCtrl::Run() {
         t->_next = nullptr;
         t->_prev = nullptr;
       }
-      
       t->Execute();
 
       {

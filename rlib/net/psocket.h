@@ -51,6 +51,14 @@ public:
   PoolingSocket(uint32_t ipaddr, int port) : _ipaddr(ipaddr), _port(port) {}
   virtual int32_t Open() override;
   virtual int32_t Close() override;
+
+  void SetIpAddr(uint32_t ipaddr) {
+    _ipaddr = ipaddr;
+  }
+  void SetPort(uint16_t port) {
+    _port = port;
+  }
+
   virtual void SetReceiveCallback(int cpuid, const Function &func) override {
     _rx_buffered.SetFunction(cpuid, func);
   }

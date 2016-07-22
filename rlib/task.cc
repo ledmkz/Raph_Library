@@ -105,39 +105,44 @@ void TaskCtrl::Run() {
         break;
       }
     }
-    while (true){
-      Task *t;
-      {
-        Locker locker(_task_struct[cpuid].lock);
-        Task *tt = _task_struct[cpuid].top;
-        t = tt->_next;
-        if (t == nullptr) {
-          kassert(tt == _task_struct[cpuid].bottom);
-          break;
+    while(true) {
+      while(true) {
+        Task *t;
+        {
+          Locker locker(_task_struct[cpuid].lock);
+          Task *tt = _task_struct[cpuid].top;
+          t = tt->_next;
+          if (t == nullptr) {
+            kassert(tt == _task_struct[cpuid].bottom);
+            break;
+          }
+          tt->_next = t->_next;
+          if (t->_next == nullptr) {
+            kassert(_task_struct[cpuid].bottom == t);
+            _task_struct[cpuid].bottom = tt;
+          } else {
+            t->_next->_prev = tt;
+          }
+          kassert(t->_status == Task::Status::kWaitingInQueue);
+          t->_status = Task::Status::kRunning;
+          t->_next = nullptr;
+          t->_prev = nullptr;
         }
-        tt->_next = t->_next;
-        if (t->_next == nullptr) {
-          kassert(_task_struct[cpuid].bottom == t);
-          _task_struct[cpuid].bottom = tt;
-        } else {
-          t->_next->_prev = tt;
-        }
-        kassert(t->_status == Task::Status::kWaitingInQueue);
-        t->_status = Task::Status::kRunning;
-        t->_next = nullptr;
-        t->_prev = nullptr;
-      }
-      t->Execute();
+        t->Execute();
 
-      {
-        Locker locker(_task_struct[cpuid].lock);
-        if (t->_status == Task::Status::kRunning) {
-          t->_status = Task::Status::kOutOfQueue;
+        {
+          Locker locker(_task_struct[cpuid].lock);
+          if (t->_status == Task::Status::kRunning) {
+            t->_status = Task::Status::kOutOfQueue;
+          }
         }
       }
-    }
-    {
       Locker locker(_task_struct[cpuid].lock);
+
+      if (_task_struct[cpuid].top->_next == nullptr && _task_struct[cpuid].top_sub->_next == nullptr) {
+        _task_struct[cpuid].state = TaskQueueState::kSleeped;
+        break;
+      }
       Task *tmp;
       tmp = _task_struct[cpuid].top;
       _task_struct[cpuid].top = _task_struct[cpuid].top_sub;
@@ -146,14 +151,11 @@ void TaskCtrl::Run() {
       tmp = _task_struct[cpuid].bottom;
       _task_struct[cpuid].bottom = _task_struct[cpuid].bottom_sub;
       _task_struct[cpuid].bottom_sub = tmp;
-
-      if (_task_struct[cpuid].top->_next != nullptr || _task_struct[cpuid].top_sub->_next != nullptr) {
-        _task_struct[cpuid].state = TaskQueueState::kNotRunning;
-      } else {
-        _task_struct[cpuid].state = TaskQueueState::kSleeped;
-      }
     }
-    if (_task_struct[cpuid].state == TaskQueueState::kSleeped) {
+    
+    kassert(_task_struct[cpuid].state == TaskQueueState::kSleeped);
+
+    {
       Locker locker(_task_struct[cpuid].dlock);
       if (_task_struct[cpuid].dtop->_next != nullptr) {
         _task_struct[cpuid].state = TaskQueueState::kNotRunning;
@@ -162,8 +164,10 @@ void TaskCtrl::Run() {
 #ifdef __KERNEL__
     if (_task_struct[cpuid].state == TaskQueueState::kNotRunning) {
       apic_ctrl->StartTimer();
+    } else {
+      kassert(_task_struct[cpuid].state == TaskQueueState::kSleeped);
+      asm volatile("hlt");
     }
-    asm volatile("hlt");
 #else
     usleep(10);
 #endif // __KERNEL__

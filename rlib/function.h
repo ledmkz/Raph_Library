@@ -138,14 +138,18 @@ public:
 class FunctionBase : public GenericFunction {
 public:
   FunctionBase() {
-    _obj = virtmem_ctrl->New<FunctionBaseObj>();
+    _obj = &dummy;
   }
   virtual ~FunctionBase() {
-    virtmem_ctrl->Delete<FunctionBaseObj>(_obj);
+    if (_obj != &dummy) {
+      delete(_obj);
+    }
   }
   void Copy(const GenericFunction &obj) {
     // TODO Lockをかけるべき？
-    virtmem_ctrl->Delete<FunctionBaseObj>(_obj);
+    if (_obj != &dummy) {
+      delete(_obj);
+    }
     _obj = obj.GetObj()->Duplicate();
   }
 private:
@@ -153,6 +157,7 @@ private:
   virtual FunctionBaseObj *GetObj() const override {
     return _obj;
   }
+  FunctionBaseObj dummy;
   FunctionBaseObj *_obj;
 };
 class Function : public GenericFunction {

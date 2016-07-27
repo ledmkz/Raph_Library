@@ -74,7 +74,7 @@ void TaskCtrl::Run() {
       apic_ctrl->StopTimer();
 #endif // __KERNEL__
       kassert(_task_struct[cpuid].state == TaskQueueState::kNotRunning
-              || _task_struct[cpuid].state == TaskQueueState::kSleeped);
+              || _task_struct[cpuid].state == TaskQueueState::kSlept);
       _task_struct[cpuid].state = TaskQueueState::kRunning;
     }
     {
@@ -140,7 +140,7 @@ void TaskCtrl::Run() {
       Locker locker(_task_struct[cpuid].lock);
 
       if (_task_struct[cpuid].top->_next == nullptr && _task_struct[cpuid].top_sub->_next == nullptr) {
-        _task_struct[cpuid].state = TaskQueueState::kSleeped;
+        _task_struct[cpuid].state = TaskQueueState::kSlept;
         break;
       }
       Task *tmp;
@@ -153,7 +153,7 @@ void TaskCtrl::Run() {
       _task_struct[cpuid].bottom_sub = tmp;
     }
     
-    kassert(_task_struct[cpuid].state == TaskQueueState::kSleeped);
+    kassert(_task_struct[cpuid].state == TaskQueueState::kSlept);
 
     {
       Locker locker(_task_struct[cpuid].dlock);
@@ -165,7 +165,7 @@ void TaskCtrl::Run() {
     if (_task_struct[cpuid].state == TaskQueueState::kNotRunning) {
       apic_ctrl->StartTimer();
     } else {
-      kassert(_task_struct[cpuid].state == TaskQueueState::kSleeped);
+      kassert(_task_struct[cpuid].state == TaskQueueState::kSlept);
       asm volatile("hlt");
     }
 #else
@@ -296,7 +296,7 @@ void TaskCtrl::CancelCallout(Callout *task) {
 
 void TaskCtrl::ForceWakeup(int cpuid) {
 #ifdef __KERNEL__
-  if (_task_struct[cpuid].state == TaskQueueState::kSleeped) {
+  if (_task_struct[cpuid].state == TaskQueueState::kSlept) {
     if (cpu_ctrl->GetId() != cpuid) {
       apic_ctrl->SendIpi(apic_ctrl->GetApicIdFromCpuId(cpuid));
     }

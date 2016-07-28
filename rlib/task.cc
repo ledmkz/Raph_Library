@@ -68,16 +68,20 @@ void TaskCtrl::Run() {
   apic_ctrl->SetupTimer(kTaskExecutionInterval);
 #endif // __KERNEL__
   while(true) {
+    TaskQueueState oldstate;
     {
       Locker locker(_task_struct[cpuid].lock);
+      oldstate = _task_struct[cpuid].state;
 #ifdef __KERNEL__
-      apic_ctrl->StopTimer();
+      if (oldstate == TaskQueueState::kNotRunning) {
+        apic_ctrl->StopTimer();
+      }
 #endif // __KERNEL__
-      kassert(_task_struct[cpuid].state == TaskQueueState::kNotRunning
-              || _task_struct[cpuid].state == TaskQueueState::kSlept);
+      kassert(oldstate == TaskQueueState::kNotRunning
+              || oldstate == TaskQueueState::kSlept);
       _task_struct[cpuid].state = TaskQueueState::kRunning;
     }
-    {
+    if (oldstate == TaskQueueState::kNotRunning) {
       uint64_t time = timer->GetCntAfterPeriod(timer->ReadMainCnt(), kTaskExecutionInterval);
       
       Callout *dt = _task_struct[cpuid].dtop;
@@ -151,6 +155,8 @@ void TaskCtrl::Run() {
       tmp = _task_struct[cpuid].bottom;
       _task_struct[cpuid].bottom = _task_struct[cpuid].bottom_sub;
       _task_struct[cpuid].bottom_sub = tmp;
+
+      //TODO : FIX THIS : callout isn't executed while this loop is running.
     }
     
     kassert(_task_struct[cpuid].state == TaskQueueState::kSlept);
@@ -166,8 +172,8 @@ void TaskCtrl::Run() {
       apic_ctrl->StartTimer();
     } else {
       kassert(_task_struct[cpuid].state == TaskQueueState::kSlept);
-      asm volatile("hlt");
     }
+    asm volatile("hlt");
 #else
     usleep(10);
 #endif // __KERNEL__

@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2015 Project Raphine
+ * Copyright (c) 2015 Raphine Project
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -146,92 +146,7 @@ class Tty {
       str->Delete();
     }
   }
-  void Cvprintf_sub(String *str, const char *fmt, va_list args) {
-    while(*fmt != '\0') {
-      switch(*fmt) {
-      case '%': {
-        fmt++;
-        switch(*fmt) {
-        case '+':
-        case '-':
-        case '#': {
-          fmt++;
-          break;
-        }
-        }
-        while(isdigit(*fmt)) {
-          fmt++;
-        }
-        switch(*fmt) {
-        case '.': {
-          fmt++;
-          break;
-        }
-        }
-        int accuracy = 0;
-        while(isdigit(*fmt)) {
-          accuracy *= 10;
-          accuracy += *fmt - '0';
-          fmt++;
-        }
-        switch(*fmt) {
-        case 'h':
-        case 'l':
-        case 'L': {
-          fmt++;
-          break;
-        }
-        }
-        switch(*fmt) {
-        case '\0': {
-          return;
-        }
-        case 'c': {
-          str->Write(static_cast<char>(va_arg(args, int)));
-          break;
-        }
-        case 's': {
-          const char *s = reinterpret_cast<const char *>(va_arg(args, const char *));
-          if (accuracy == 0) {
-            while(*s) {
-              str->Write(*s);
-              s++;
-            }
-          } else {
-            for (; accuracy > 0; accuracy--, s++) { 
-              if (*s == '\0') {
-                break;
-              }
-              str->Write(*s);
-            }
-          }
-          break;
-        }
-        case 'u':
-        case 'd': {
-          PrintInt(*str, "d", reinterpret_cast<int>(va_arg(args, int)));
-          break;
-        }
-        case 'p':
-        case 'X':
-        case 'x': {
-          PrintInt(*str, "x", reinterpret_cast<int>(va_arg(args, int)));
-          break;
-        }
-        default: {
-          str->Write('%');
-          str->Write(*fmt);
-        }
-        }
-        break;
-      }
-      default: {
-        str->Write(*fmt);
-      }
-      }
-      fmt++;
-    }
-  }
+  void Cvprintf_sub(String *str, const char *fmt, va_list args);
   void Printf_sub1(String &str) {
   }
   template<class T>

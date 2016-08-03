@@ -20,35 +20,55 @@
  * 
  */
 
-#ifndef __RAPH_LIB_CPU_H__
-#define __RAPH_LIB_CPU_H__
+#ifndef __RAPH_LIB_ERROR_H__
+#define __RAPH_LIB_ERROR_H__
 
-class CpuCtrlInterface {
+#include <raph.h>
+
+template<class T>
+class ErrorContainer {
 public:
-  virtual ~CpuCtrlInterface() {
+  ErrorContainer(T &data) {
+    _data = data;
+    _error = false;
   }
-  virtual volatile int GetId() = 0;
-  virtual int GetHowManyCpus() = 0;
-  bool IsValidId(int cpuid) {
-    return (cpuid >= 0 && cpuid < GetHowManyCpus());
+  ErrorContainer() {
+    _error = true;
   }
+  T &GetValue() {
+    if (_error) {
+      kernel_panic("ErrorContainer", "failed to get value.");
+    }
+    return _data;
+  }
+  bool IsError() {
+    return _error;
+  }
+private:
+  T _data;
+  bool _error;
 };
 
-#ifdef __KERNEL__
-#include <apic.h>
-#include <global.h>
-
-class CpuCtrl : public CpuCtrlInterface {
+template<class T>
+class ErrorContainer<T *> {
 public:
-  virtual volatile int GetId() override {
-    return apic_ctrl->GetCpuId();
+  ErrorContainer(T *data) {
+    _data = data;
   }
-  virtual int GetHowManyCpus() override {
-    return apic_ctrl->GetHowManyCpus();
+  ErrorContainer() {
+    _data = nullptr;
   }
+  T *GetValue() {
+    if (_data == nullptr) {
+      kernel_panic("ErrorContainer", "failed to get value.");
+    }
+    return _data;
+  }
+  bool IsError() {
+    return (_data == nullptr);
+  }
+private:
+  T *_data;
 };
-#else
-#include <thread.h>
-#endif /* __KERNEL__ */
 
-#endif /* __RAPH_LIB_CPU_H__ */
+#endif /* __RAPH_LIB_ERROR_H__ */

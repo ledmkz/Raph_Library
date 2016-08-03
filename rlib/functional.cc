@@ -38,19 +38,17 @@ void Functional::WakeupFunction() {
 
 void Functional::Handle(void *p) {
   Functional *that = reinterpret_cast<Functional *>(p);
-  while(true) {
-    // ロック時間を最低限にするため、Emptyでない間はLockせずにループさせる
-    if (that->ShouldFunc()) {
-      that->_func.Execute();
-    } else {
-      Locker locker(that->_lock);
-      if (!that->ShouldFunc()) {
-        that->_state = FunctionState::kNotFunctioning;
-        // task_ctrl->Remove(that->_cpuid, &that->_task);
-        break;
-      }
+  if (that->ShouldFunc()) {
+    that->_func.Execute();
+  }
+  {
+    Locker locker(that->_lock);
+    if (!that->ShouldFunc()) {
+      that->_state = FunctionState::kNotFunctioning;
+      return;
     }
   }
+  task_ctrl->Register(that->_cpuid, &that->_task);
 }
 
 void Functional::SetFunction(int cpuid, const GenericFunction &func) {

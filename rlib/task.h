@@ -37,7 +37,7 @@ public:
     kNotStarted,
     kNotRunning,
     kRunning,
-    kSleeped,
+    kSlept,
   };
   TaskCtrl() {}
   void Setup();
@@ -51,6 +51,18 @@ public:
     return _task_struct[cpuid].state;
   }
  private:
+  class ProcHaltCtrl {
+  public:
+    virtual ~ProcHaltCtrl() {
+    }
+    virtual void SetupSchedular(int interval) {
+    }
+    virtual void Halt() {
+    }
+    virtual void ScheduleWakeup() {
+    }
+  };
+  
   friend Callout;
   void RegisterCallout(Callout *task);
   void CancelCallout(Callout *task);
@@ -69,7 +81,7 @@ public:
     IntSpinLock dlock;
     Callout *dtop;
   } *_task_struct = nullptr;
-  // this const value defines interval of wakeup task controller when all task sleeped
+  // this const value defines interval of wakeup task controller when all task slept
   // (task controller doesn't sleep if there is any registered tasks)
   static const int kTaskExecutionInterval = 1000; // us
 };

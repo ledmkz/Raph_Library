@@ -103,6 +103,9 @@ public:
   Status GetStatus() {
     return _status;
   }
+  int GetCpuId() {
+    return _cpuid;
+  }
 private:
   void Execute() {
     _func.Execute();

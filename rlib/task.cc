@@ -128,6 +128,7 @@ void TaskCtrl::Run() {
             t->_next->_prev = tt;
           }
           kassert(t->_status == Task::Status::kWaitingInQueue);
+          kassert(t->_cpuid == cpuid);
           t->_status = Task::Status::kRunning;
           t->_next = nullptr;
           t->_prev = nullptr;

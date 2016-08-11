@@ -51,4 +51,35 @@ private:
   T *_obj;
 };
 
+template<class T>
+class sptr {
+public:
+  sptr(const sptr &p) {
+    _obj = p._obj;
+    _ref_cnt = p._ref_cnt;
+    while(!__sync_bool_compare_and_swap(_ref_cnt, *_ref_cnt, *_ref_cnt + 1)) {
+    }
+  }
+  template <class ...Args>
+  sptr(Args ...args) {
+    _obj = new T(args...);
+    _ref_cnt = new int(1);
+  }
+  ~sptr() {
+    while(!__sync_bool_compare_and_swap(_ref_cnt, *_ref_cnt, *_ref_cnt - 1)) {
+    }
+    if (*_ref_cnt == 0) {
+      delete _obj;
+    }
+  }
+  T *operator&();
+  T *operator*();
+  T *operator->() {
+    return _obj;
+  }
+private:
+  T *_obj;
+  int *_ref_cnt;
+};
+
 #endif // __RAPH_LIBRARY_PTR_H__

@@ -36,10 +36,10 @@ void Functional::WakeupFunction() {
   task_ctrl->Register(_cpuid, &_task);
 }
 
-void Functional::Handle(void *p) {
+void Functional::Handle(Task *t, void *p) {
   Functional *that = reinterpret_cast<Functional *>(p);
   if (that->ShouldFunc()) {
-    that->_func.Execute();
+    that->_func.Execute(t);
   }
   {
     Locker locker(that->_lock);
@@ -51,7 +51,7 @@ void Functional::Handle(void *p) {
   task_ctrl->Register(that->_cpuid, &that->_task);
 }
 
-void Functional::SetFunction(int cpuid, const GenericFunction &func) {
+void Functional::SetFunction(int cpuid, const GenericFunction2<Task> &func) {
   kassert(!_func.CanExecute());
   _cpuid = cpuid;
   _func.Copy(func);

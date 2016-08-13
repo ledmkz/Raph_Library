@@ -30,7 +30,6 @@ public:
   SpinLockInterface() {}
   virtual ~SpinLockInterface() {}
   virtual volatile unsigned int GetFlag() = 0;
-  virtual volatile int GetProcId() = 0;
   virtual void Lock() = 0;
   virtual void Unlock() = 0;
   virtual int Trylock() = 0;
@@ -45,9 +44,6 @@ public:
   virtual volatile unsigned int GetFlag() override {
     return _flag;
   }
-  virtual volatile int GetProcId() override {
-    return _id;
-  }
   virtual void Lock() override;
   virtual void Unlock() override;
   virtual int Trylock() override;
@@ -59,7 +55,6 @@ protected:
     return __sync_bool_compare_and_swap(&_flag, old_flag, new_flag);
   }
   volatile unsigned int _flag = 0;
-  volatile int _id;
 };
 
 #ifdef __KERNEL__
@@ -72,9 +67,6 @@ public:
   virtual ~IntSpinLock() {}
   virtual volatile unsigned int GetFlag() override {
     return _flag;
-  }
-  virtual volatile int GetProcId() override {
-    return _id;
   }
   virtual void Lock() override;
   virtual void Unlock() override;
@@ -89,7 +81,6 @@ protected:
   void DisableInt();
   void EnableInt();
   volatile unsigned int _flag = 0;
-  volatile int _id;
   bool _did_stop_interrupt = false;
 };
 #else
@@ -100,23 +91,11 @@ public:
 };
 #endif // __KERNEL__
 
-class DebugSpinLock : public SpinLock {
-public:
-  DebugSpinLock() {
-    _key = kKey;
-  }
-  virtual ~DebugSpinLock() {}
-  virtual void Lock() override;
-private:
-  int _key;
-  static const int kKey = 0x13572468;
-};
-
 // コンストラクタ、デストラクタでlock,unlockができるラッパー
 // 関数からreturnする際に必ずunlockできるので、unlock忘れを防止する
 class Locker {
  public:
- Locker(SpinLockInterface &lock) : _lock(lock) {
+  Locker(SpinLockInterface &lock) : _lock(lock) {
     _lock.Lock();
   }
   ~Locker() {

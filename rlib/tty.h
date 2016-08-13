@@ -37,7 +37,7 @@ class Tty {
   Tty() {
   }
   void Init() {
-    Function func;
+    Function2<Task> func;
     func.Init(Handle, reinterpret_cast<void *>(this));
     //TODO cpuid
     _queue.SetFunction(1, func);
@@ -134,7 +134,7 @@ class Tty {
     int offset;
     String *next;
   };
-  static void Handle(void *tty){
+  static void Handle(Task *t, void *tty){
     Tty *that = reinterpret_cast<Tty *>(tty);
     void *s;
     while(that->_queue.Pop(s)) {

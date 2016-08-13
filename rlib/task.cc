@@ -128,7 +128,7 @@ void TaskCtrl::Run() {
             t->_next->_prev = tt;
           }
           kassert(t->_status == Task::Status::kWaitingInQueue);
-          kassert(t->_cpuid == cpuid);
+          kassert(t->_cpuinfo.GetId() == cpuid);
           t->_status = Task::Status::kRunning;
           t->_next = nullptr;
           t->_prev = nullptr;
@@ -185,7 +185,8 @@ void TaskCtrl::Register(int cpuid, Task *task) {
   if (task->_status == Task::Status::kWaitingInQueue) {
     return;
   }
-  task->_cpuid = cpuid;
+  task->_cpuinfo.~CurrentCpuInfo();
+  new (&task->_cpuinfo) CurrentCpuInfo(cpuid);
   task->_next = nullptr;
   task->_status = Task::Status::kWaitingInQueue;
   _task_struct[cpuid].bottom_sub->_next = task;
@@ -197,7 +198,7 @@ void TaskCtrl::Register(int cpuid, Task *task) {
 
 void TaskCtrl::Remove(Task *task) {
   kassert(task->_status != Task::Status::kGuard);
-  int cpuid = task->_cpuid;
+  int cpuid = task->_cpuinfo.GetId();
   Locker locker(_task_struct[cpuid].lock);
   switch(task->_status) {
   case Task::Status::kWaitingInQueue: {
@@ -323,7 +324,7 @@ void CountableTask::Inc() {
   }
 }
 
-void CountableTask::HandleSub(void *) {
+void CountableTask::HandleSub(Task *, void *) {
   _func.Execute();
   {
     Locker locker(_lock);
@@ -350,7 +351,7 @@ void Callout::Cancel() {
   task_ctrl->CancelCallout(this);
 }
 
-void Callout::HandleSub(void *) {
+void Callout::HandleSub(Task *, void *) {
   if (timer->IsTimePassed(_time)) {
     _state = CalloutState::kHandling;
     _func.Execute();

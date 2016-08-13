@@ -27,6 +27,7 @@
 #include <function.h>
 #include <spinlock.h>
 #include <timer.h>
+#include <cpuinfo.h>
 
 class Task;
 class Callout;
@@ -88,10 +89,10 @@ public:
 
 class Task {
 public:
-  Task() {
+  Task() : _cpuinfo(0) {
   }
   virtual ~Task();
-  void SetFunc(const GenericFunction &func) {
+  void SetFunc(const GenericFunction2<Task> &func) {
     _func.Copy(func);
   }
   enum class Status {
@@ -103,17 +104,17 @@ public:
   Status GetStatus() {
     return _status;
   }
-  int GetCpuId() {
-    return _cpuid;
+  CurrentCpuInfo &GetCpuInfo() {
+    return _cpuinfo;
   }
 private:
   void Execute() {
-    _func.Execute();
+    _func.Execute(this);
   }
-  FunctionBase _func;
+  FunctionBase2<Task> _func;
   Task *_next;
   Task *_prev;
-  int _cpuid;
+  CurrentCpuInfo _cpuinfo;
   Status _status = Status::kOutOfQueue;
   friend TaskCtrl;
 };
@@ -126,7 +127,7 @@ public:
   CountableTask() {
     _cnt = 0;
     _cpuid = -1;
-    ClassFunction<CountableTask> func;
+    ClassFunction2<CountableTask, Task> func;
     func.Init(this, &CountableTask::HandleSub, nullptr);
     _task.SetFunc(func);
   }
@@ -141,7 +142,7 @@ public:
   }
   void Inc();
 private:
-  void HandleSub(void *);
+  void HandleSub(Task *, void *);
   Task _task;
   IntSpinLock _lock;
   FunctionBase _func;
@@ -161,7 +162,7 @@ public:
     kStopped,
   };
   Callout() {
-    ClassFunction<Callout> func;
+    ClassFunction2<Callout, Task> func;
     func.Init(this, &Callout::HandleSub, nullptr);
     _task.SetFunc(func);
   }
@@ -180,7 +181,7 @@ public:
   void SetHandler(int cpuid, int us);
   void Cancel();
 private:
-  void HandleSub(void *);
+  void HandleSub(Task *, void *);
   int _cpuid;
   Task _task;
   uint64_t _time;

@@ -20,37 +20,20 @@
  * 
  */
 
-#ifndef __RAPH_KERNEL_FUNCTIONAL_H__
-#define __RAPH_KERNEL_FUNCTIONAL_H__
+#ifndef __RAPH_LIB_CPUINFO_H__
+#define __RAPH_LIB_CPUINFO_H__
 
-#include <spinlock.h>
-#include <task.h>
-
-class Functional {
- public:
-  enum class FunctionState {
-    kFunctioning,
-    kNotFunctioning,
-  };
-  Functional() {
-    Function2<Task> func;
-    func.Init(Handle, reinterpret_cast<void *>(this));
-    _task.SetFunc(func);
+class CurrentCpuInfo {
+public:
+  CurrentCpuInfo(int cpuid) : _cpuid(cpuid) {
   }
-  virtual ~Functional() {
+  int GetId() {
+    return _cpuid;
   }
-  void SetFunction(int cpuid, const GenericFunction2<Task> &func);
- protected:
-  void WakeupFunction();
-  // check whether Functional needs to process function
-  virtual bool ShouldFunc() = 0;
- private:
-  static void Handle(Task *, void *p);
-  FunctionBase2<Task> _func;
-  Task _task;
-  int _cpuid = 0;
-  SpinLock _lock;
-  FunctionState _state = FunctionState::kNotFunctioning;
+private:
+  CurrentCpuInfo();
+  const int _cpuid;
 };
 
-#endif // __RAPH_KERNEL_FUNCTIONAL_H__
+
+#endif /* __RAPH_LIB_CPUINFO_H__ */

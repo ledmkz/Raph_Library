@@ -31,30 +31,14 @@
 #endif // __KERNEL__
 
 void SpinLock::Lock() {
-#ifdef __KERNEL__
-  kassert(idt->GetHandlingCnt() == 0);
-#endif // __KERNEL__
-  if ((_flag % 2) == 1) {
-    kassert(_id != cpu_ctrl->GetId());
-  }
   volatile unsigned int flag = GetFlag();
   while((flag % 2) == 1 || !SetFlag(flag, flag + 1)) {
     flag = GetFlag();
   }
-  _id = cpu_ctrl->GetId();
-}
-
-void DebugSpinLock::Lock() {
-  kassert(_key == kKey);
-  if ((_flag % 2) == 1) {
-    kassert(_id != cpu_ctrl->GetId());
-  }
-  SpinLock::Lock();
 }
 
 void SpinLock::Unlock() {
   kassert((_flag % 2) == 1);
-  _id = -1;
   _flag++;
 }
 
@@ -69,9 +53,6 @@ int SpinLock::Trylock() {
 
 #ifdef __KERNEL__
 void IntSpinLock::Lock() {
-  if ((_flag % 2) == 1) {
-    kassert(_id != cpu_ctrl->GetId());
-  }
   volatile unsigned int flag = GetFlag();
   while(true) {
     if ((flag % 2) != 1) {
@@ -83,12 +64,10 @@ void IntSpinLock::Lock() {
     }
     flag = GetFlag();
   }
-  _id = cpu_ctrl->GetId();
 }
 
 void IntSpinLock::Unlock() {
   kassert((_flag % 2) == 1);
-  _id = -1;
   _flag++;
   this->EnableInt();
 }

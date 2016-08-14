@@ -180,6 +180,9 @@ public:
   void SetHandler(uint32_t us);
   void SetHandler(int cpuid, int us);
   void Cancel();
+  bool IsPending() {
+    return _pending;
+  }
 private:
   void HandleSub(Task *, void *);
   int _cpuid;
@@ -188,6 +191,7 @@ private:
   Callout *_next;
   FunctionBase _func;
   IntSpinLock _lock;
+  bool _pending = false;
   friend TaskCtrl;
   CalloutState _state = CalloutState::kStopped;
 };
@@ -223,6 +227,9 @@ class LckCallout {
   }
   void Cancel() {
     callout.Cancel();
+  }
+  bool IsPending() {
+    return callout.IsPending();
   }
  private:
   void HandleSub(void *) {

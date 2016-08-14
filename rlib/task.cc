@@ -343,16 +343,19 @@ void Callout::SetHandler(int cpuid, int us) {
   Locker locker(_lock);
   _time = timer->GetCntAfterPeriod(timer->ReadMainCnt(), us);
   _cpuid = cpuid;
+  _pending = true;
   task_ctrl->RegisterCallout(this);
 }
 
 void Callout::Cancel() {
   Locker locker(_lock);
+  _pending = false;
   task_ctrl->CancelCallout(this);
 }
 
 void Callout::HandleSub(Task *, void *) {
   if (timer->IsTimePassed(_time)) {
+    _pending = false;
     _state = CalloutState::kHandling;
     _func.Execute();
     _state = CalloutState::kStopped;

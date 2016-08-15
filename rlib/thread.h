@@ -34,10 +34,8 @@
 class PthreadCtrl : public CpuCtrlInterface {
 public:
   PthreadCtrl() : _thread_pool(0) {
-    Setup();
   }
   PthreadCtrl(int num_threads) : _cpu_nums(num_threads), _thread_pool(num_threads-1) {
-    Setup();
   }
   ~PthreadCtrl();
   virtual volatile int GetId() override;

@@ -51,6 +51,14 @@ public:
   PoolingSocket(uint32_t ipaddr, int port) : _ipaddr(ipaddr), _port(port) {}
   virtual int32_t Open() override;
   virtual int32_t Close() override;
+
+  void SetIpAddr(uint32_t ipaddr) {
+    _ipaddr = ipaddr;
+  }
+  void SetPort(uint16_t port) {
+    _port = port;
+  }
+
   virtual void SetReceiveCallback(int cpuid, const Function &func) override {
     _rx_buffered.SetFunction(cpuid, func);
   }
@@ -92,6 +100,15 @@ public:
   }
   bool IsTcpPacket(Packet *packet);
   bool IsUdpPacket(Packet *packet);
+
+  int32_t GetUdpSocket() {
+    return _udp_socket;
+  }
+
+  struct sockaddr *GetAccessInfoFromClientNumber(int32_t cli) {
+    int32_t index = GetUdpClientIndexFromClientNumber(cli);
+    return reinterpret_cast<struct sockaddr *>(&_udp_client[index].addr);
+  }
 
 protected:
   static const int32_t kMaxClientNumber = 256;

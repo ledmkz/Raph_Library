@@ -27,6 +27,7 @@ class CpuCtrlInterface {
 public:
   virtual ~CpuCtrlInterface() {
   }
+  virtual void Setup() {}
   virtual volatile int GetId() = 0;
   virtual int GetHowManyCpus() = 0;
   bool IsValidId(int cpuid) {

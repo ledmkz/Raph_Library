@@ -44,11 +44,6 @@ void PthreadCtrl::Setup() {
         // sub thread id
         _thread_ids[i+1] = GetThreadId();
 
-        // avoid starting task loop at the same time with other threads
-        // (otherwise program may crush)
-        uint64_t wait_us = rand() % 1000000;
-        timer->BusyUwait(wait_us);
-
         task_ctrl->Run();
     }));
     _thread_pool[i] = std::move(th);

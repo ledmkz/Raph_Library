@@ -46,6 +46,7 @@ void AllocateLibGlobalObjects() {
 
 void InitializeLibGlobalObjects() {
   task_ctrl->Setup();
+  cpu_ctrl->Setup();
   gtty->Init();
   gerr->Init();
 }

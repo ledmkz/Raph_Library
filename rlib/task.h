@@ -50,6 +50,9 @@ public:
     }
     return _task_struct[cpuid].state;
   }
+  // MEMO
+  // do not forget to change cpuid on KernelStackInfo
+  // if you move Task to another cpu queue.
  private:
   class ProcHaltCtrl {
   public:

@@ -37,11 +37,12 @@ public:
 #ifdef __KERNEL__
 #include <apic.h>
 #include <global.h>
+#include <mem/kstack.h>
 
 class CpuCtrl : public CpuCtrlInterface {
 public:
   virtual volatile int GetId() override {
-    return apic_ctrl->GetCpuId();
+    return KernelStackCtrl::GetCtrl().GetCpuId();
   }
   virtual int GetHowManyCpus() override {
     return apic_ctrl->GetHowManyCpus();

@@ -55,6 +55,7 @@ protected:
     return __sync_bool_compare_and_swap(&_flag, old_flag, new_flag);
   }
   volatile unsigned int _flag = 0;
+  volatile int _id = -1;
 };
 
 #ifdef __KERNEL__
@@ -82,6 +83,7 @@ protected:
   void EnableInt();
   volatile unsigned int _flag = 0;
   bool _did_stop_interrupt = false;
+  volatile int _id;
 };
 #else
 class IntSpinLock : public SpinLock {

@@ -27,7 +27,6 @@
 #include <function.h>
 #include <spinlock.h>
 #include <timer.h>
-#include <cpuinfo.h>
 
 class Task;
 class Callout;
@@ -89,7 +88,7 @@ public:
 
 class Task {
 public:
-  Task() : _cpuinfo(0) {
+  Task() {
   }
   virtual ~Task();
   void SetFunc(const GenericFunction2<Task> &func) {
@@ -104,9 +103,6 @@ public:
   Status GetStatus() {
     return _status;
   }
-  CurrentCpuInfo &GetCpuInfo() {
-    return _cpuinfo;
-  }
 private:
   void Execute() {
     _func.Execute(this);
@@ -114,7 +110,6 @@ private:
   FunctionBase2<Task> _func;
   Task *_next;
   Task *_prev;
-  CurrentCpuInfo _cpuinfo;
   Status _status = Status::kOutOfQueue;
   friend TaskCtrl;
 };

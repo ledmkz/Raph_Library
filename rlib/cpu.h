@@ -42,6 +42,9 @@ public:
 class CpuCtrl : public CpuCtrlInterface {
 public:
   virtual volatile int GetId() override {
+    if (!KernelStackCtrl::IsInitialized()) {
+      return apic_ctrl->GetCpuId();
+    }
     return KernelStackCtrl::GetCtrl().GetCpuId();
   }
   virtual int GetHowManyCpus() override {

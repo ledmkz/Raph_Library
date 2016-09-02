@@ -73,4 +73,56 @@ class FunctionalQueue final : public Functional {
   Queue _queue;
 };
 
+// TODO replace Queue to Queue2.
+template<class T>
+class Queue2 {
+ public:
+  Queue2() {
+    _last = &_first;
+    _first.data = nullptr;
+    _first.next = nullptr;
+  }
+  virtual ~Queue2() {
+  }
+  void Push(T *data);
+  // 空の時はfalseが帰る
+  bool Pop(T *&data);
+  bool IsEmpty() {
+    return &_first == _last;
+  }
+ private:
+  struct Container {
+    T *data;
+    Container *next;
+  };
+  Container _first;
+  Container *_last;
+  SpinLock _lock;
+};
+
+template <class T>
+class FunctionalQueue2 final : public Functional {
+ public:
+  FunctionalQueue2() {
+  }
+  ~FunctionalQueue2() {
+  }
+  void Push(T *data) {
+    _queue.Push(data);
+    WakeupFunction();
+  }
+  bool Pop(T *&data) {
+    return _queue.Pop(data);
+  }
+  bool IsEmpty() {
+    return _queue.IsEmpty();
+  }
+ private:
+  virtual bool ShouldFunc() override {
+    return !_queue.IsEmpty();
+  }
+  Queue2<T> _queue;
+};
+
+
 #endif // __RAPH_KERNEL_RAPHQUEUE_H__

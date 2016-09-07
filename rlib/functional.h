@@ -46,11 +46,18 @@ class Functional {
   virtual bool ShouldFunc() = 0;
  private:
   static void Handle(void *p);
+  virtual SpinLockInterface &GetLock();
   FunctionBase _func;
   Task _task;
   int _cpuid = 0;
   SpinLock _lock;
   FunctionState _state = FunctionState::kNotFunctioning;
+};
+
+class IntFunctional : public Functional {
+ private:
+  SpinLockInterface &GetLock();
+  IntSpinLock _lock;
 };
 
 #endif // __RAPH_KERNEL_FUNCTIONAL_H__
